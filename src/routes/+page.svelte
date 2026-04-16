@@ -1,14 +1,175 @@
+<script lang="ts">
+  import StatCard from '$lib/components/StatCard.svelte';
+  import StatusBadge from '$lib/components/StatusBadge.svelte';
+  import SectionHeader from '$lib/components/SectionHeader.svelte';
+
+  let { data } = $props();
+
+  function formatTime(iso: string | null): string {
+    if (!iso) return '--';
+    try {
+      return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch {
+      return '--';
+    }
+  }
+
+  function formatSpeed(kibps: number): string {
+    if (kibps >= 1024) return `${(kibps / 1024).toFixed(1)} MiB/s`;
+    return `${Math.round(kibps)} KiB/s`;
+  }
+
+  function formatDate(dateStr: string): string {
+    try {
+      return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  }
+
+  function forecastIcon(code: number): string {
+    const map: Record<number, string> = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 51: '🌦️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 80: '🌦️', 95: '⛈️' };
+    return map[code] ?? '🌤️';
+  }
+
+  const alarmLabels: Record<string, string> = {
+    armed_away: 'Armed Away',
+    armed_home: 'Armed Home',
+    armed_night: 'Armed Night',
+    disarmed: 'Disarmed',
+    triggered: 'TRIGGERED'
+  };
+</script>
+
 <svelte:head>
   <title>21 Bristoe Stats</title>
   <meta name="description" content="Household dashboard for 21 Bristoe Station Rd, Taneytown MD" />
 </svelte:head>
 
-<div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
-  <h1 class="text-5xl font-bold tracking-tight mb-4">
-    <span class="text-accent">21 Bristoe</span> Stats
-  </h1>
-  <p class="text-lg text-slate-600 dark:text-slate-400 max-w-md">
-    Household dashboard &mdash; weather, house status, drinks, and more.
-  </p>
-  <p class="text-sm text-slate-400 dark:text-slate-600 mt-8">Coming soon</p>
+<div class="space-y-10">
+  <!-- Hero -->
+  <div class="text-center pb-2">
+    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
+      <span class="text-accent">21 Bristoe</span> Stats
+    </h1>
+    <p class="mt-2 text-slate-500 dark:text-slate-400">Taneytown, MD &middot; Live household dashboard</p>
+  </div>
+
+  <!-- House Status -->
+  <section>
+    <SectionHeader title="House Status" icon="🏠" />
+    {#if !data.ha.available}
+      <div class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-700 dark:text-amber-400">
+        Home Assistant unavailable — some data may be missing
+      </div>
+    {/if}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+      <StatCard
+        label="Indoor"
+        value={data.ha.indoor ? `${Math.round(data.ha.indoor.temp)}` : '--'}
+        unit="°F"
+        icon="🌡️"
+        sublabel={data.ha.humidity != null ? `${data.ha.humidity}% humidity` : ''}
+      />
+      <StatCard
+        label="Outdoor"
+        value={data.ha.outdoor ? `${Math.round(data.ha.outdoor.temp)}` : '--'}
+        unit="°F"
+        icon="🌿"
+        sublabel={data.ha.hvacMode ? `HVAC: ${data.ha.hvacMode}` : ''}
+      />
+      <StatCard
+        label="Security"
+        value={data.ha.alarm ? alarmLabels[data.ha.alarm] ?? data.ha.alarm : '--'}
+        icon="🔒"
+      />
+      <StatCard
+        label="Network"
+        value={data.ha.network ? formatSpeed(data.ha.network.down) : '--'}
+        icon="📡"
+        sublabel={data.ha.network ? `↑ ${formatSpeed(data.ha.network.up)}` : ''}
+      />
+    </div>
+  </section>
+
+  <!-- Weather -->
+  {#if data.weather}
+    <section>
+      <SectionHeader title="Taneytown Weather" icon="🌤️" />
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+          <div class="flex items-center gap-4">
+            <span class="text-5xl">{data.weather.icon}</span>
+            <div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {Math.round(data.weather.temperature)}°F
+              </p>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{data.weather.description}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">
+                Feels like {Math.round(data.weather.apparentTemperature)}°F &middot; Wind {Math.round(data.weather.windSpeed)} mph
+              </p>
+            </div>
+          </div>
+        </div>
+        {#if data.forecast.length > 0}
+          <div class="col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">7-Day Forecast</p>
+            <div class="flex gap-2 overflow-x-auto">
+              {#each data.forecast as day}
+                <div class="flex flex-col items-center min-w-[3.5rem] text-center">
+                  <span class="text-xs text-slate-400 dark:text-slate-500">{formatDate(day.date)}</span>
+                  <span class="text-lg my-1">{forecastIcon(day.weatherCode)}</span>
+                  <span class="text-xs font-medium text-slate-700 dark:text-slate-300">{Math.round(day.tempMax)}°</span>
+                  <span class="text-xs text-slate-400 dark:text-slate-500">{Math.round(day.tempMin)}°</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      {#if data.yearStats}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+          <StatCard label="Rainy days this year" value={data.yearStats.rainyDaysThisYear} icon="🌧️" />
+          <StatCard label="Sunny days this year" value={data.yearStats.sunnyDaysThisYear} icon="☀️" />
+          {#if data.yearStats.hottestDay}
+            <StatCard label="Hottest day" value="{data.yearStats.hottestDay.temp}°F" icon="🔥" sublabel={formatDate(data.yearStats.hottestDay.date)} />
+          {/if}
+          {#if data.yearStats.coldestDay}
+            <StatCard label="Coldest day" value="{data.yearStats.coldestDay.temp}°F" icon="🥶" sublabel={formatDate(data.yearStats.coldestDay.date)} />
+          {/if}
+          <StatCard label="Days since rain" value={data.yearStats.daysSinceRain} icon="💧" />
+        </div>
+      {/if}
+    </section>
+  {/if}
+
+  <!-- TV & Entertainment -->
+  <section>
+    <SectionHeader title="Entertainment" icon="📺" />
+    <div class="flex flex-wrap gap-3 mb-4">
+      {#each data.ha.tvs as tv}
+        <StatusBadge label={tv.name} active={tv.on} />
+      {/each}
+      <StatusBadge label="Xbox" active={data.ha.xbox.on} activeText={data.ha.xbox.nowPlaying ?? 'On'} />
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {#if data.ha.xbox.gamerscore != null}
+        <StatCard label="Gamerscore" value={data.ha.xbox.gamerscore.toLocaleString()} icon="🎮" unit="pts" />
+      {/if}
+      <StatCard label="Sunrise" value={formatTime(data.ha.sun.sunrise)} icon="🌅" />
+      <StatCard label="Sunset" value={formatTime(data.ha.sun.sunset)} icon="🌇" />
+    </div>
+  </section>
+
+  <!-- Limón -->
+  <section>
+    <SectionHeader title="Limón Report" icon="🐕" />
+    <p class="text-sm text-slate-500 dark:text-slate-400 -mt-2 mb-4 italic">Daily stats for our golden retriever (totally accurate, definitely not made up)</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {#each data.limonStats as stat}
+        <StatCard label={stat.label} value={stat.value} icon={stat.icon} />
+      {/each}
+    </div>
+  </section>
 </div>
