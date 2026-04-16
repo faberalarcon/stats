@@ -130,7 +130,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {#if data.charts.bedroomTVHours.length > 0}
           <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Bedroom TV on-time (hrs/day)</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Bedroom TV on-time (hrs/day) — 30 days</p>
             <BarChart
               labels={data.charts.bedroomTVHours.map(d => formatDate(d.date))}
               data={data.charts.bedroomTVHours.map(d => d.hours)}
@@ -140,7 +140,7 @@
         {/if}
         {#if data.charts.livingTVHours.length > 0}
           <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Living Room TV on-time (hrs/day)</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Living Room TV on-time (hrs/day) — 30 days</p>
             <BarChart
               labels={data.charts.livingTVHours.map(d => formatDate(d.date))}
               data={data.charts.livingTVHours.map(d => d.hours)}

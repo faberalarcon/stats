@@ -4,14 +4,15 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [haStates, indoorHistory, outdoorHistory, bedroomTVHistory, livingTVHistory, forecast] =
     await Promise.all([
       getStates(Object.values(ENTITIES)).catch(() => new Map()),
       getHistory(ENTITIES.indoorTemp, sevenDaysAgo).catch(() => []),
       getHistory(ENTITIES.outdoorTemp, sevenDaysAgo).catch(() => []),
-      getHistory(ENTITIES.bedroomTV, sevenDaysAgo).catch(() => []),
-      getHistory(ENTITIES.livingRoomTV, sevenDaysAgo).catch(() => []),
+      getHistory(ENTITIES.bedroomTV, thirtyDaysAgo).catch(() => []),
+      getHistory(ENTITIES.livingRoomTV, thirtyDaysAgo).catch(() => []),
       getDailyForecast().catch(() => [])
     ]);
 
