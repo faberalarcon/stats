@@ -4,6 +4,7 @@
   import Leaderboard from '$lib/components/Leaderboard.svelte';
   import BarChart from '$lib/components/BarChart.svelte';
   import LineChart from '$lib/components/LineChart.svelte';
+  import FilterBar from '$lib/components/FilterBar.svelte';
 
   let { data } = $props();
 
@@ -41,10 +42,18 @@
     <p class="mt-2 text-slate-500 dark:text-slate-400">Order history, leaderboards, and trends</p>
   </div>
 
+  {#if s}
+    <FilterBar
+      profiles={s.profiles}
+      drinks={s.drinks}
+      filters={data.filters}
+    />
+  {/if}
+
   {#if !s}
-    <div class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-6 text-center">
-      <p class="text-amber-700 dark:text-amber-400 font-medium">Drink Hub unavailable</p>
-      <p class="text-sm text-amber-600 dark:text-amber-500 mt-1">Could not connect to drink-hub API</p>
+    <div class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 p-6 text-center">
+      <p class="text-sky-700 dark:text-sky-400 font-medium">Drink Hub unavailable</p>
+      <p class="text-sm text-sky-600 dark:text-sky-500 mt-1">Could not connect to drink-hub API</p>
     </div>
   {:else}
     <!-- Totals -->

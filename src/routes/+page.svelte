@@ -162,14 +162,81 @@
     </div>
   </section>
 
+  <!-- Taneytown Fun Facts -->
+  {#if data.yearStats}
+    <section>
+      <SectionHeader title="Taneytown, MD — {new Date().getFullYear()} So Far" icon="📍" />
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Rainy days this year"
+          value={data.yearStats.rainyDaysThisYear}
+          icon="🌧️"
+          sublabel="days with >0.5mm precip"
+        />
+        <StatCard
+          label="Sunny days this year"
+          value={data.yearStats.sunnyDaysThisYear}
+          icon="☀️"
+          sublabel="clear or mainly clear"
+        />
+        {#if data.yearStats.hottestDay}
+          <StatCard
+            label="Hottest day"
+            value="{Math.round(data.yearStats.hottestDay.temp)}°F"
+            icon="🔥"
+            sublabel={formatDate(data.yearStats.hottestDay.date)}
+          />
+        {/if}
+        {#if data.yearStats.coldestDay}
+          <StatCard
+            label="Coldest day"
+            value="{Math.round(data.yearStats.coldestDay.temp)}°F"
+            icon="🥶"
+            sublabel={formatDate(data.yearStats.coldestDay.date)}
+          />
+        {/if}
+        <StatCard
+          label="Days since last rain"
+          value={data.yearStats.daysSinceRain}
+          icon="💧"
+          sublabel={data.yearStats.daysSinceRain === 0 ? "Raining now!" : data.yearStats.daysSinceRain === 1 ? "Yesterday" : "days of dry weather"}
+        />
+        {#if data.yearStats.avgTempThisMonth}
+          <StatCard
+            label="Avg temp this month"
+            value="{data.yearStats.avgTempThisMonth}°F"
+            icon="🌡️"
+          />
+        {/if}
+      </div>
+    </section>
+  {/if}
+
   <!-- Limón -->
   <section>
     <SectionHeader title="Limón Report" icon="🐕" />
-    <p class="text-sm text-slate-500 dark:text-slate-400 -mt-2 mb-4 italic">Daily stats for our golden retriever (totally accurate, definitely not made up)</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400 -mt-2 mb-4 italic">
+      Daily stats for our golden retriever
+      {#if data.ha.outdoor}
+        · Today {Math.round(data.ha.outdoor.temp)}°F outside
+      {/if}
+      (totally accurate, definitely not made up)
+    </p>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {#each data.limonStats as stat}
-        <StatCard label={stat.label} value={stat.value} icon={stat.icon} />
+        <div class="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{stat.label}</p>
+              <p class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{stat.value}</p>
+            </div>
+            <span class="text-2xl flex-shrink-0 group-hover:scale-125 transition-transform duration-300">{stat.icon}</span>
+          </div>
+        </div>
       {/each}
     </div>
+    <p class="mt-3 text-xs text-center text-slate-400 dark:text-slate-600 italic">
+      Stats refresh on each page load for maximum scientific accuracy
+    </p>
   </section>
 </div>
