@@ -20,7 +20,7 @@ services:
       - XFF_DEPTH=1
       - HA_BASE_URL=${HA_BASE_URL:-http://ai.local:8123}
       - HA_TOKEN=${HA_TOKEN:-}
-      - DRINK_HUB_URL=${DRINK_HUB_URL:-http://127.0.0.1:5173}
+      - DRINK_HUB_URL=${DRINK_HUB_URL:-https://drink-hub.21bristoe.com}
       - TZ=${TZ:-America/New_York}
     extra_hosts:
       - "ai.local:host-gateway"

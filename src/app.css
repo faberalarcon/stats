@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-accent: #f97316;
-  --color-accent-light: #fb923c;
-  --color-accent-dark: #ea580c;
+  --color-accent: #7dd3fc;
+  --color-accent-light: #bae6fd;
+  --color-accent-dark: #38bdf8;
 }
