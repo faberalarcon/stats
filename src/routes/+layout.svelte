@@ -25,7 +25,8 @@
   const navLinks = [
     { href: '/', label: 'Home', icon: '🏠' },
     { href: '/drinks', label: 'Drinks', icon: '🍻' },
-    { href: '/house', label: 'House', icon: '📡' }
+    { href: '/house', label: 'House', icon: '📡' },
+    { href: '/backups', label: 'Backups', icon: '💾' }
   ];
 </script>
 
