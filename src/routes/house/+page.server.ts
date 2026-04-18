@@ -1,5 +1,5 @@
 import { getStates, getHistory, ENTITIES } from '$lib/server/home-assistant';
-import { getDailyForecast } from '$lib/server/weather';
+import { getDailyForecast, getHourlyOutdoorTemps, getCurrentWeather } from '$lib/server/weather';
 import type { PageServerLoad } from './$types';
 
 // All bucket alignment is pinned to NY time via Intl, independent of process.env.TZ.
@@ -95,14 +95,16 @@ export const load: PageServerLoad = async ({ url }) => {
   const [
     haStates,
     indoorHistory,
-    outdoorHistory,
+    outdoorBuckets,
+    currentOutdoor,
     bedroomTVHistory,
     livingTVHistory,
     forecast
   ] = await Promise.all([
     getStates(Object.values(ENTITIES)).catch(() => new Map()),
     getHistory(ENTITIES.indoorTemp, sevenDaysAgo, new Date(now)).catch(() => []),
-    getHistory(ENTITIES.outdoorTemp, sevenDaysAgo, new Date(now)).catch(() => []),
+    getHourlyOutdoorTemps(7).catch(() => []),
+    getCurrentWeather().catch(() => null),
     getHistory(ENTITIES.bedroomTV, rangeStart, new Date(now)).catch(() => []),
     getHistory(ENTITIES.livingRoomTV, rangeStart, new Date(now)).catch(() => []),
     getDailyForecast().catch(() => [])
@@ -198,7 +200,6 @@ export const load: PageServerLoad = async ({ url }) => {
   }
 
   const indoorBuckets = bucketHourly(indoorHistory, 56);
-  const outdoorBuckets = bucketHourly(outdoorHistory, 56);
   const bedroomTVBuckets = tvOnHoursPerBucket(bedroomTVHistory);
   const livingTVBuckets = tvOnHoursPerBucket(livingTVHistory);
 
@@ -214,7 +215,9 @@ export const load: PageServerLoad = async ({ url }) => {
       indoor: get('indoorTemp'),
       humidity: get('humidity'),
       hvac: get('hvacMode'),
-      outdoor: get('outdoorTemp'),
+      outdoor: currentOutdoor
+        ? { state: String(Math.round(currentOutdoor.temperature * 10) / 10), attrs: {} }
+        : null,
       alarm: get('alarm'),
       livingTV: get('livingRoomTV'),
       bedroomTV: get('bedroomTV'),

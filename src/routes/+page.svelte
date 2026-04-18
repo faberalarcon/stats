@@ -186,7 +186,7 @@
           label="Rainy days this year"
           value={data.yearStats.rainyDaysThisYear}
           icon="🌧️"
-          sublabel="days with >0.5mm precip"
+          sublabel="days with >0.01in precip"
         />
         <StatCard
           label="Sunny days this year"

@@ -46,8 +46,35 @@ export async function getCurrentWeather(): Promise<CurrentWeather> {
   };
 }
 
+export async function getHourlyOutdoorTemps(pastDays = 7): Promise<{ time: string; value: number }[]> {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m&temperature_unit=fahrenheit&timezone=America%2FNew_York&timeformat=unixtime&past_days=${pastDays}&forecast_days=1`;
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+  if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
+
+  const data = await res.json();
+  const h = data.hourly;
+  if (!h?.time) return [];
+  const nowSec = Math.floor(Date.now() / 1000);
+  const labelFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric'
+  });
+  const out: { time: string; value: number }[] = [];
+  for (let i = 0; i < h.time.length; i++) {
+    const tsSec = h.time[i];
+    if (tsSec > nowSec) break;
+    const val = h.temperature_2m[i];
+    if (val == null) continue;
+    out.push({ time: labelFmt.format(new Date(tsSec * 1000)), value: Math.round(val * 10) / 10 });
+  }
+  return out;
+}
+
 export async function getDailyForecast(): Promise<DailyWeather[]> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=7`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=7`;
 
   const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
   if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
@@ -68,10 +95,10 @@ export async function getYearStats(): Promise<WeatherStats> {
   const yearStart = `${now.getFullYear()}-01-01`;
   const today = now.toISOString().split('T')[0];
 
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&start_date=${yearStart}&end_date=${today}&past_days=0`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York&start_date=${yearStart}&end_date=${today}&past_days=0`;
 
   // Open-Meteo archive API for past dates
-  const archiveUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&timezone=America%2FNew_York&start_date=${yearStart}&end_date=${today}`;
+  const archiveUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${LAT}&longitude=${LON}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York&start_date=${yearStart}&end_date=${today}`;
 
   const res = await fetch(archiveUrl, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`Open-Meteo archive ${res.status}`);
@@ -108,7 +135,7 @@ export async function getYearStats(): Promise<WeatherStats> {
     const date = d.time[i];
     const dateMonth = new Date(date + 'T12:00:00').getMonth();
 
-    if (precip > 0.5) rainyDays++;
+    if (precip > 0.01) rainyDays++;
     if (code <= 1) sunnyDays++; // WMO: 0 = clear, 1 = mainly clear
 
     if (maxTemp != null && (!hottestDay || maxTemp > hottestDay.temp)) {
@@ -126,7 +153,7 @@ export async function getYearStats(): Promise<WeatherStats> {
 
   // Days since last rain — count backwards from today
   for (let i = d.time.length - 1; i >= 0; i--) {
-    if ((d.precipitation_sum[i] ?? 0) > 0.5) {
+    if ((d.precipitation_sum[i] ?? 0) > 0.01) {
       foundRecentRain = true;
       break;
     }

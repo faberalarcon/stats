@@ -88,6 +88,14 @@
 
     return () => chart?.destroy();
   });
+
+  $effect(() => {
+    if (!chart) return;
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].backgroundColor = colors.length > 0 ? colors : data.map(() => defaultColor);
+    chart.update();
+  });
 </script>
 
 <div class="relative w-full" style="height: 280px">

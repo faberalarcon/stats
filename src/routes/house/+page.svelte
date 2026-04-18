@@ -212,7 +212,7 @@
               <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">{Math.round(day.tempMax)}°</span>
               <span class="text-xs text-slate-400 dark:text-slate-500">{Math.round(day.tempMin)}°</span>
               {#if day.precipitationSum > 0}
-                <span class="text-xs text-sky-400">{day.precipitationSum.toFixed(1)}mm</span>
+                <span class="text-xs text-sky-400">{day.precipitationSum.toFixed(2)}in</span>
               {/if}
             </div>
           {/each}
