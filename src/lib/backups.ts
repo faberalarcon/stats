@@ -19,11 +19,32 @@ export interface TierData {
   lastSuccess: BackupEntry | null;
 }
 
+export interface DriveHealth {
+  mounted: boolean;
+  uuid: string | null;
+  mountpoint: string;
+  totalBytes: number;
+  freeBytes: number;
+  updatedAt: string | null;
+}
+
 export interface BackupManifest {
   available: boolean;
   updatedAt: string | null;
   manifestMtime: string | null;
   tiers: Record<BackupTier, TierData>;
+  drive: DriveHealth;
+}
+
+export function emptyDrive(): DriveHealth {
+  return {
+    mounted: false,
+    uuid: null,
+    mountpoint: '/mnt/usbbackup',
+    totalBytes: 0,
+    freeBytes: 0,
+    updatedAt: null
+  };
 }
 
 export const DEFAULT_RETAIN: Record<BackupTier, number> = {

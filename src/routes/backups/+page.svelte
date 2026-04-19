@@ -2,9 +2,23 @@
   import SectionHeader from '$lib/components/SectionHeader.svelte';
   import StatCard from '$lib/components/StatCard.svelte';
   import { TIERS, humanAge, formatBytes, formatDuration, staleness } from '$lib/backups';
-  import type { BackupTier, TierData } from '$lib/backups';
+  import type { BackupTier, TierData, DriveHealth } from '$lib/backups';
+
+  function pctUsed(d: DriveHealth): number {
+    if (!d.totalBytes) return 0;
+    return Math.min(100, Math.max(0, ((d.totalBytes - d.freeBytes) / d.totalBytes) * 100));
+  }
+
+  function usageColor(pct: number): string {
+    if (pct >= 90) return 'bg-rose-500';
+    if (pct >= 75) return 'bg-amber-500';
+    return 'bg-emerald-500';
+  }
 
   let { data } = $props();
+
+  const drive = $derived(data.manifest.drive);
+  const used = $derived(pctUsed(drive));
 
   const TIER_META: Record<BackupTier, { icon: string; label: string; cadence: string }> = {
     daily:     { icon: '📅', label: 'Daily',     cadence: 'every day at 03:00' },
@@ -163,11 +177,54 @@
     </div>
   </section>
 
+  <!-- Drive health -->
+  <section>
+    <SectionHeader title="Drive health" icon="🧪" />
+    <article class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+      <header class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 class="font-semibold text-slate-800 dark:text-slate-200">128 GB USB (SanDisk Ultra)</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono">{drive.mountpoint}</p>
+        </div>
+        <span
+          class="text-xs font-medium px-2 py-1 rounded-full {drive.mounted
+            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}"
+        >
+          {drive.mounted ? 'mounted' : 'offline'}
+        </span>
+      </header>
+
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dt class="text-slate-500 dark:text-slate-400">Free</dt>
+        <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatBytes(drive.freeBytes)}</dd>
+
+        <dt class="text-slate-500 dark:text-slate-400">Total</dt>
+        <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatBytes(drive.totalBytes)}</dd>
+
+        <dt class="text-slate-500 dark:text-slate-400">Used</dt>
+        <dd class="text-slate-800 dark:text-slate-200 font-medium">{used.toFixed(1)}%</dd>
+
+        <dt class="text-slate-500 dark:text-slate-400">UUID</dt>
+        <dd class="text-slate-800 dark:text-slate-200 font-mono text-xs break-all">{drive.uuid ?? '—'}</dd>
+
+        <dt class="text-slate-500 dark:text-slate-400">As of</dt>
+        <dd class="text-slate-800 dark:text-slate-200 font-medium">{humanAge(drive.updatedAt)}</dd>
+      </dl>
+
+      <div class="mt-4">
+        <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+          <div class="h-full {usageColor(used)} transition-all" style="width: {used}%"></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
   <!-- Destination -->
   <section>
     <SectionHeader title="Destination" icon="🗄️" />
     <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 text-sm text-slate-600 dark:text-slate-400 space-y-1">
-      <p>USB drive mounted at <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/mnt/usbbackup</code></p>
+      <p>128 GB USB drive (label <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">usbbackup</code>) mounted at <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/mnt/usbbackup</code></p>
       <p>Snapshots under <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/mnt/usbbackup/backups/&lt;tier&gt;/&lt;timestamp&gt;</code></p>
       <p>Dedup: <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">rsync --link-dest</code> against previous snapshot in the same tier</p>
     </div>
