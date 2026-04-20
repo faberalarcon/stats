@@ -4,34 +4,27 @@
   import { TIERS, humanAge, formatBytes, formatDuration, staleness } from '$lib/backups';
   import type { BackupTier, TierData, DriveHealth } from '$lib/backups';
 
+  let { data } = $props();
+
   function pctUsed(d: DriveHealth): number {
     if (!d.totalBytes) return 0;
     return Math.min(100, Math.max(0, ((d.totalBytes - d.freeBytes) / d.totalBytes) * 100));
   }
 
-  function usageColor(pct: number): string {
-    if (pct >= 90) return 'bg-rose-500';
-    if (pct >= 75) return 'bg-amber-500';
-    return 'bg-emerald-500';
+  function usageToken(pct: number): 'ok' | 'warn' | 'alert' {
+    if (pct >= 90) return 'alert';
+    if (pct >= 75) return 'warn';
+    return 'ok';
   }
-
-  let { data } = $props();
 
   const drive = $derived(data.manifest.drive);
   const used = $derived(pctUsed(drive));
 
-  const TIER_META: Record<BackupTier, { icon: string; label: string; cadence: string }> = {
-    daily:     { icon: '📅', label: 'Daily',     cadence: 'every day at 03:00' },
-    weekly:    { icon: '🗓️', label: 'Weekly',    cadence: 'Sundays at 03:30' },
-    monthly:   { icon: '📆', label: 'Monthly',   cadence: '1st of month at 04:00' },
-    quarterly: { icon: '🧭', label: 'Quarterly', cadence: '1st of Jan/Apr/Jul/Oct at 04:30' }
-  };
-
-  const STATE_STYLE: Record<string, string> = {
-    fresh:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-    due:      'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-    overdue:  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-    unknown:  'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+  const TIER_META: Record<BackupTier, { label: string; cadence: string }> = {
+    daily:     { label: 'Daily',     cadence: 'every day at 03:00' },
+    weekly:    { label: 'Weekly',    cadence: 'Sundays at 03:30' },
+    monthly:   { label: 'Monthly',   cadence: '1st of month at 04:00' },
+    quarterly: { label: 'Quarterly', cadence: '1st of Jan/Apr/Jul/Oct at 04:30' }
   };
 
   function totalSize(m: typeof data.manifest): number {
@@ -53,180 +46,321 @@
 </script>
 
 <svelte:head>
-  <title>Backups — 21 Bristoe Stats</title>
-  <meta name="description" content="Pi backup tier status, history, and retention" />
+  <title>The Archive State — § II.IV · 21 Bristoe</title>
+  <meta name="description" content="Pi backup tiers, history, and retention" />
 </svelte:head>
 
-<div class="space-y-10">
-  <div class="text-center pb-2">
-    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-      <span class="text-accent">Backups</span>
-    </h1>
-    <p class="mt-2 text-slate-500 dark:text-slate-400">
-      Tiered rsync snapshots of <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/home/faber</code> to the USB drive
+<article class="archive">
+  <header class="archive__head reveal">
+    <p class="dossier-kicker">§ II.IV &middot; The Archive State</p>
+    <h1 class="archive__title">Tiered snapshots,<br/><em>held in reserve.</em></h1>
+    <p class="archive__lede">
+      Rsync snapshots of <code class="archive__code">/home/faber</code> to the USB drive,
+      rotated by tier. Health and last-success below.
     </p>
-  </div>
+    <hr class="dossier-rule dossier-rule--ornate" />
+  </header>
 
   {#if !data.manifest.available}
-    <div class="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-700 dark:text-amber-400">
-      No backup manifest yet. Cron will populate it on next scheduled run (or run <code class="font-mono text-xs">/home/faber/bin/backup.sh daily</code> manually).
-    </div>
+    <p class="archive__note">
+      <span class="dossier-status dossier-status--alert">No manifest yet</span>
+      &mdash; cron will populate on next scheduled run, or run <code class="archive__code">/home/faber/bin/backup.sh daily</code> manually.
+    </p>
   {/if}
 
-  <!-- Overview -->
-  <section>
-    <SectionHeader title="Overview" icon="💾" />
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <section class="archive__section reveal">
+    <SectionHeader numeral="II.IV.01" title="Overview" meta="summary.log" />
+    <div class="stat-grid">
       <StatCard
         label="Healthy tiers"
         value={`${healthyTiers(data.manifest)} / ${TIERS.length}`}
-        icon="✅"
         accent
       />
       <StatCard
         label="Latest snapshot"
         value={humanAge(lastOverall(data.manifest))}
-        icon="⏱️"
         sublabel={lastOverall(data.manifest) ?? ''}
       />
       <StatCard
-        label="Total backup size"
+        label="Total size"
         value={formatBytes(totalSize(data.manifest))}
-        icon="📦"
         sublabel="sum of last successful per tier"
       />
       <StatCard
         label="Manifest updated"
         value={humanAge(data.manifest.manifestMtime ?? data.manifest.updatedAt)}
-        icon="📝"
       />
     </div>
   </section>
 
-  <!-- Tier cards -->
-  <section>
-    <SectionHeader title="Tiers" icon="🧱" />
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {#each TIERS as tier}
-        {@const t = data.manifest.tiers[tier] as TierData}
-        {@const meta = TIER_META[tier]}
-        {@const state = staleness(tier, t.last)}
-        <article class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all duration-300 hover:shadow-lg">
-          <header class="flex items-start justify-between gap-3 mb-3">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl">{meta.icon}</span>
-              <div>
-                <h3 class="font-semibold text-slate-800 dark:text-slate-200">{meta.label}</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{meta.cadence}</p>
-              </div>
-            </div>
-            <span class="text-xs font-medium px-2 py-1 rounded-full {STATE_STYLE[state]}">{state}</span>
-          </header>
-
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt class="text-slate-500 dark:text-slate-400">Last run</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{humanAge(t.last?.timestamp)}</dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Status</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">
+  <section class="archive__section reveal">
+    <SectionHeader numeral="II.IV.02" title="Tiers" meta="ledger" />
+    <table class="dossier-table archive__tiers">
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Cadence</th>
+          <th>Last run</th>
+          <th>Status</th>
+          <th class="num">Last size</th>
+          <th class="num">Duration</th>
+          <th class="num">Files</th>
+          <th class="num">Retain</th>
+          <th class="num">Streak</th>
+          <th>Recent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each TIERS as tier}
+          {@const t = data.manifest.tiers[tier] as TierData}
+          {@const meta = TIER_META[tier]}
+          {@const state = staleness(tier, t.last)}
+          <tr>
+            <td class="archive__tier-label">{meta.label}</td>
+            <td><em class="archive__cadence">{meta.cadence}</em></td>
+            <td>{humanAge(t.last?.timestamp)}</td>
+            <td>
               {#if t.last}
-                <span class="{t.last.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
-                  {t.last.status}
-                </span>
-              {:else}
-                —
-              {/if}
-            </dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Last good size</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatBytes(t.lastSuccess?.sizeBytes ?? 0)}</dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Duration</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatDuration(t.lastSuccess?.durationSec ?? 0)}</dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Files</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{(t.lastSuccess?.fileCount ?? 0).toLocaleString()}</dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Retained</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{t.retain} snapshots</dd>
-
-            <dt class="text-slate-500 dark:text-slate-400">Success streak</dt>
-            <dd class="text-slate-800 dark:text-slate-200 font-medium">{t.successStreak} run{t.successStreak === 1 ? '' : 's'}</dd>
-          </dl>
-
-          {#if t.last?.error}
-            <p class="mt-3 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 p-2 rounded">
-              {t.last.error}
-            </p>
-          {/if}
-
-          <!-- Recent history strip -->
-          {#if t.history.length > 0}
-            <div class="mt-4 flex gap-1" aria-label="Recent runs">
-              {#each t.history.slice(-14) as entry}
                 <span
-                  class="h-6 flex-1 rounded-sm {entry.status === 'success' ? 'bg-emerald-400 dark:bg-emerald-600' : 'bg-rose-400 dark:bg-rose-600'}"
-                  title="{entry.timestamp} — {entry.status}"
-                ></span>
-              {/each}
-            </div>
-            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">last {Math.min(t.history.length, 14)} run{t.history.length === 1 ? '' : 's'}</p>
+                  class="dossier-status"
+                  class:dossier-status--active={state === 'fresh' && t.last.status === 'success'}
+                  class:dossier-status--alert={state === 'overdue' || t.last.status !== 'success'}
+                  class:dossier-status--idle={state === 'due' || state === 'unknown'}
+                >{t.last.status}</span>
+              {:else}
+                &mdash;
+              {/if}
+            </td>
+            <td class="num">{formatBytes(t.lastSuccess?.sizeBytes ?? 0)}</td>
+            <td class="num">{formatDuration(t.lastSuccess?.durationSec ?? 0)}</td>
+            <td class="num">{(t.lastSuccess?.fileCount ?? 0).toLocaleString()}</td>
+            <td class="num">{t.retain}</td>
+            <td class="num">{t.successStreak}</td>
+            <td>
+              {#if t.history.length > 0}
+                <div class="archive__history" aria-label="Recent runs">
+                  {#each t.history.slice(-14) as entry}
+                    <span
+                      class="archive__tick"
+                      class:archive__tick--fail={entry.status !== 'success'}
+                      title="{entry.timestamp} — {entry.status}"
+                    ></span>
+                  {/each}
+                </div>
+              {:else}
+                &mdash;
+              {/if}
+            </td>
+          </tr>
+          {#if t.last?.error}
+            <tr class="archive__error-row">
+              <td colspan="10" class="archive__error">{t.last.error}</td>
+            </tr>
           {/if}
-        </article>
-      {/each}
-    </div>
+        {/each}
+      </tbody>
+    </table>
   </section>
 
-  <!-- Drive health -->
-  <section>
-    <SectionHeader title="Drive health" icon="🧪" />
-    <article class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-      <header class="flex items-start justify-between gap-3 mb-4">
+  <section class="archive__section reveal">
+    <SectionHeader numeral="II.IV.03" title="Drive Health" meta="usbbackup" />
+    <div class="dossier-figure">
+      <div class="archive__drive-head">
         <div>
-          <h3 class="font-semibold text-slate-800 dark:text-slate-200">128 GB USB (SanDisk Ultra)</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono">{drive.mountpoint}</p>
+          <h3 class="archive__drive-name">128 GB USB (SanDisk Ultra)</h3>
+          <p class="archive__drive-mount">{drive.mountpoint}</p>
         </div>
         <span
-          class="text-xs font-medium px-2 py-1 rounded-full {drive.mounted
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'}"
-        >
-          {drive.mounted ? 'mounted' : 'offline'}
-        </span>
-      </header>
+          class="dossier-status"
+          class:dossier-status--active={drive.mounted}
+          class:dossier-status--alert={!drive.mounted}
+        >{drive.mounted ? 'mounted' : 'offline'}</span>
+      </div>
 
-      <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <dt class="text-slate-500 dark:text-slate-400">Free</dt>
-        <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatBytes(drive.freeBytes)}</dd>
-
-        <dt class="text-slate-500 dark:text-slate-400">Total</dt>
-        <dd class="text-slate-800 dark:text-slate-200 font-medium">{formatBytes(drive.totalBytes)}</dd>
-
-        <dt class="text-slate-500 dark:text-slate-400">Used</dt>
-        <dd class="text-slate-800 dark:text-slate-200 font-medium">{used.toFixed(1)}%</dd>
-
-        <dt class="text-slate-500 dark:text-slate-400">UUID</dt>
-        <dd class="text-slate-800 dark:text-slate-200 font-mono text-xs break-all">{drive.uuid ?? '—'}</dd>
-
-        <dt class="text-slate-500 dark:text-slate-400">As of</dt>
-        <dd class="text-slate-800 dark:text-slate-200 font-medium">{humanAge(drive.updatedAt)}</dd>
+      <dl class="archive__dl">
+        <div><dt>Free</dt> <dd>{formatBytes(drive.freeBytes)}</dd></div>
+        <div><dt>Total</dt> <dd>{formatBytes(drive.totalBytes)}</dd></div>
+        <div><dt>Used</dt> <dd>{used.toFixed(1)}%</dd></div>
+        <div><dt>UUID</dt> <dd class="archive__uuid">{drive.uuid ?? '—'}</dd></div>
+        <div><dt>As of</dt> <dd>{humanAge(drive.updatedAt)}</dd></div>
       </dl>
 
-      <div class="mt-4">
-        <div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-          <div class="h-full {usageColor(used)} transition-all" style="width: {used}%"></div>
-        </div>
+      <div class="archive__usage">
+        <div
+          class="archive__usage-fill"
+          class:archive__usage-fill--warn={usageToken(used) === 'warn'}
+          class:archive__usage-fill--alert={usageToken(used) === 'alert'}
+          style="width: {used}%"
+        ></div>
       </div>
-    </article>
-  </section>
-
-  <!-- Destination -->
-  <section>
-    <SectionHeader title="Destination" icon="🗄️" />
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 text-sm text-slate-600 dark:text-slate-400 space-y-1">
-      <p>128 GB USB drive (label <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">usbbackup</code>) mounted at <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/mnt/usbbackup</code></p>
-      <p>Snapshots under <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">/mnt/usbbackup/backups/&lt;tier&gt;/&lt;timestamp&gt;</code></p>
-      <p>Dedup: <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">rsync --link-dest</code> against previous snapshot in the same tier</p>
     </div>
   </section>
-</div>
+
+  <section class="archive__section reveal">
+    <SectionHeader numeral="II.IV.04" title="Destination" meta="paths" />
+    <div class="dossier-figure archive__dest">
+      <p>128 GB USB drive (label <code class="archive__code">usbbackup</code>) mounted at <code class="archive__code">/mnt/usbbackup</code></p>
+      <p>Snapshots under <code class="archive__code">/mnt/usbbackup/backups/&lt;tier&gt;/&lt;timestamp&gt;</code></p>
+      <p>Dedup via <code class="archive__code">rsync --link-dest</code> against previous snapshot in the same tier</p>
+    </div>
+  </section>
+</article>
+
+<style>
+  .archive__head { margin-bottom: 2rem; }
+  .archive__title {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 4vw + 1rem, 4rem);
+    font-weight: 500;
+    line-height: 1;
+    margin: 0.75rem 0 1rem;
+    color: var(--color-ink-900);
+    font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  }
+  .archive__title em {
+    font-style: italic;
+    color: var(--color-blood-500);
+    font-variation-settings: 'opsz' 144, 'SOFT' 100;
+  }
+  .archive__lede {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    color: var(--color-ink-700);
+    line-height: 1.55;
+    max-width: 58ch;
+  }
+  .archive__code {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    background: var(--color-paper-200);
+    padding: 0.1rem 0.4rem;
+    color: var(--color-ink-900);
+    letter-spacing: 0;
+  }
+  .archive__note {
+    margin: 0 0 2rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--color-ink-500);
+  }
+  .archive__section { margin: 3rem 0; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0 2rem;
+  }
+
+  .archive__tiers {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .archive__tier-label {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    color: var(--color-ink-900);
+    font-size: 1rem;
+    font-variation-settings: 'opsz' 36, 'SOFT' 30;
+  }
+  .archive__cadence {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--color-ink-500);
+    font-size: 0.8125rem;
+    font-variation-settings: 'opsz' 24, 'SOFT' 100;
+  }
+  .archive__history {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+  }
+  .archive__tick {
+    width: 8px;
+    height: 14px;
+    background: var(--color-olive-500);
+    display: inline-block;
+  }
+  .archive__tick--fail { background: var(--color-blood-500); }
+  .archive__error-row td { background: var(--color-paper-200) !important; }
+  .archive__error {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-blood-500);
+    padding: 0.6rem 0.5rem !important;
+  }
+
+  .archive__drive-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-paper-300);
+  }
+  .archive__drive-name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--color-ink-900);
+    margin: 0;
+    font-size: 1.25rem;
+    font-variation-settings: 'opsz' 36, 'SOFT' 30;
+  }
+  .archive__drive-mount {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-ink-500);
+    margin: 0.25rem 0 0;
+  }
+  .archive__dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem 2rem;
+    margin: 0 0 1rem;
+  }
+  .archive__dl > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .archive__dl dt {
+    font-family: var(--font-body);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+  .archive__dl dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    color: var(--color-ink-900);
+  }
+  .archive__uuid {
+    font-size: 0.75rem !important;
+    word-break: break-all;
+    color: var(--color-ink-700) !important;
+  }
+  .archive__usage {
+    height: 6px;
+    background: var(--color-paper-200);
+    overflow: hidden;
+  }
+  .archive__usage-fill {
+    height: 100%;
+    background: var(--color-olive-500);
+    transition: width 0.6s ease-out;
+  }
+  .archive__usage-fill--warn { background: var(--color-leaf-500); }
+  .archive__usage-fill--alert { background: var(--color-blood-500); }
+
+  .archive__dest p {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--color-ink-700);
+  }
+  .archive__dest p:last-child { margin-bottom: 0; }
+</style>

@@ -3,21 +3,49 @@
 </script>
 
 <svelte:head>
-  <title>Error — 21 Bristoe Stats</title>
+  <title>Erratum — § II · 21 Bristoe Stats</title>
 </svelte:head>
 
-<div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-  <p class="text-6xl font-bold text-slate-200 dark:text-slate-800">{$page.status}</p>
-  <h1 class="mt-2 text-2xl font-bold text-slate-800 dark:text-slate-200">
-    {$page.status === 404 ? 'Page not found' : 'Something went wrong'}
+<article class="errata">
+  <p class="dossier-kicker">An Erratum</p>
+  <p class="errata__numeral">{$page.status}</p>
+  <hr class="dossier-rule" />
+  <h1 class="errata__head">
+    {$page.status === 404 ? 'This reading is absent from the volume.' : 'An instrument has failed.'}
   </h1>
-  <p class="mt-2 text-slate-500 dark:text-slate-400 max-w-sm">
-    {$page.error?.message ?? 'An unexpected error occurred.'}
-  </p>
-  <a
-    href="/"
-    class="mt-6 px-5 py-2 rounded-lg bg-sky-400 hover:bg-sky-500 text-white font-medium transition-colors"
-  >
-    Go home
-  </a>
-</div>
+  <p class="errata__body">{$page.error?.message ?? 'An unexpected error occurred.'}</p>
+  <a href="/" class="dossier-button dossier-button--accent">Return to § II · Overview</a>
+</article>
+
+<style>
+  .errata {
+    max-width: 48ch;
+    margin: 4rem auto;
+    text-align: center;
+  }
+  .errata__numeral {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(5rem, 14vw, 9rem);
+    line-height: 0.9;
+    color: var(--color-ink-900);
+    margin: 1rem 0 0;
+    font-variation-settings: 'opsz' 144, 'SOFT' 100;
+  }
+  .errata__head {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.5vw + 1rem, 2.25rem);
+    font-weight: 500;
+    color: var(--color-ink-900);
+    margin: 1rem 0;
+    font-variation-settings: 'opsz' 48, 'SOFT' 30;
+  }
+  .errata__body {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-ink-700);
+    margin: 0 auto 2rem;
+    max-width: 40ch;
+  }
+</style>

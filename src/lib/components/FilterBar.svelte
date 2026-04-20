@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { untrack } from 'svelte';
 
   let {
     profiles = [],
@@ -12,11 +12,11 @@
     filters: { profileId: string; drinkId: string; category: string; from: string; to: string };
   } = $props();
 
-  let profileId = $state(filters.profileId);
-  let drinkId = $state(filters.drinkId);
-  let category = $state(filters.category);
-  let from = $state(filters.from);
-  let to = $state(filters.to);
+  let profileId = $state(untrack(() => filters.profileId));
+  let drinkId = $state(untrack(() => filters.drinkId));
+  let category = $state(untrack(() => filters.category));
+  let from = $state(untrack(() => filters.from));
+  let to = $state(untrack(() => filters.to));
 
   const categories = $derived([...new Set(drinks.map((d) => d.category))].filter(Boolean));
 
@@ -44,74 +44,96 @@
   );
 </script>
 
-<div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 mb-6">
-  <div class="flex flex-wrap gap-3 items-end">
-    <!-- Profile filter -->
+<fieldset class="filters">
+  <legend class="filters__legend">Filter the ledger</legend>
+
+  <div class="filters__grid">
     {#if profiles.length > 0}
-      <div class="min-w-[8rem]">
-        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Person</label>
-        <select
-          bind:value={profileId}
-          class="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-        >
+      <label class="filters__field">
+        <span class="dossier-label">Person</span>
+        <select bind:value={profileId} class="dossier-select">
           <option value="">All</option>
           {#each profiles as p}
             <option value={String(p.id)}>{p.name}</option>
           {/each}
         </select>
-      </div>
+      </label>
     {/if}
 
-    <!-- Category filter -->
     {#if categories.length > 1}
-      <div class="min-w-[8rem]">
-        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Category</label>
-        <select
-          bind:value={category}
-          class="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-        >
+      <label class="filters__field">
+        <span class="dossier-label">Category</span>
+        <select bind:value={category} class="dossier-select">
           <option value="">All</option>
           {#each categories as cat}
             <option value={cat}>{cat}</option>
           {/each}
         </select>
-      </div>
+      </label>
     {/if}
 
-    <!-- Date range -->
-    <div>
-      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">From</label>
-      <input
-        type="date"
-        bind:value={from}
-        class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-      />
-    </div>
-    <div>
-      <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">To</label>
-      <input
-        type="date"
-        bind:value={to}
-        class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300"
-      />
-    </div>
+    <label class="filters__field">
+      <span class="dossier-label">From</span>
+      <input type="date" bind:value={from} class="dossier-input" />
+    </label>
 
-    <!-- Actions -->
-    <div class="flex gap-2">
-      <button
-        onclick={apply}
-        class="px-4 py-1.5 text-sm font-medium rounded-lg bg-sky-400 hover:bg-sky-500 text-white transition-colors"
-      >Apply</button>
+    <label class="filters__field">
+      <span class="dossier-label">To</span>
+      <input type="date" bind:value={to} class="dossier-input" />
+    </label>
+
+    <div class="filters__actions">
+      <button type="button" class="dossier-button dossier-button--accent" onclick={apply}>Apply</button>
       {#if isFiltered}
-        <button
-          onclick={reset}
-          class="px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-        >Clear</button>
+        <button type="button" class="dossier-button dossier-button--ghost" onclick={reset}>Clear</button>
       {/if}
     </div>
   </div>
 
   {#if isFiltered}
-    <p class="mt-2 text-xs text-sky-500 dark:text-sky-400">Filters active — showing filtered results</p>
+    <p class="filters__note">
+      <span class="dossier-status dossier-status--alert">Filters active</span>
+    </p>
   {/if}
-</div>
+</fieldset>
+
+<style>
+  .filters {
+    border: 1px solid var(--color-paper-300);
+    padding: 1.25rem 1.5rem 1.5rem;
+    background: var(--color-paper-100);
+    margin-bottom: 2rem;
+    min-width: 0;
+  }
+  .filters__legend {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-blood-500);
+    padding: 0 0.6rem;
+  }
+  .filters__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1.25rem 1.5rem;
+    align-items: end;
+  }
+  .filters__field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .filters__actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .filters__note {
+    margin: 1rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-paper-300);
+  }
+</style>

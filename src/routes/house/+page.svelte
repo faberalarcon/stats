@@ -13,7 +13,6 @@
     { value: '30d', label: '30d' },
     { value: '90d', label: '90d' }
   ];
-
   const rangeLabels: Record<string, string> = {
     '1d': 'last 24 hours (hourly)',
     '7d': 'last 7 days',
@@ -40,99 +39,98 @@
 
   const alarmLabels: Record<string, string> = {
     armed_away: 'Armed Away', armed_home: 'Armed Home',
-    armed_night: 'Armed Night', disarmed: 'Disarmed', triggered: '⚠️ TRIGGERED'
+    armed_night: 'Armed Night', disarmed: 'Disarmed', triggered: 'TRIGGERED'
   };
 </script>
 
 <svelte:head>
-  <title>House — 21 Bristoe Stats</title>
-  <meta name="description" content="House status and historical data" />
+  <title>The House Plant — § II.II · 21 Bristoe</title>
+  <meta name="description" content="House sensors and rolling history" />
 </svelte:head>
 
-<div class="space-y-10">
-  <div class="text-center pb-2">
-    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-      <span class="text-accent">House</span> Status
-    </h1>
-    <p class="mt-2 text-slate-500 dark:text-slate-400">Live sensors and rolling history</p>
-  </div>
+<article class="house">
+  <header class="house__head reveal">
+    <p class="dossier-kicker">§ II.II &middot; The House Plant</p>
+    <h1 class="house__title">Sensors, history,<br/><em>and a little weather.</em></h1>
+    <p class="house__lede">
+      Live readings from Home Assistant and rolling seven-day history, figured
+      as plate-ruled charts. Toggle the range below the entertainment panel.
+    </p>
+    <hr class="dossier-rule dossier-rule--ornate" />
+  </header>
 
   {#if !data.ha.available}
-    <div class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 p-4 text-sm text-sky-700 dark:text-sky-400">
-      Home Assistant unavailable — showing last known data where possible
-    </div>
+    <p class="house__note">
+      <span class="dossier-status dossier-status--alert">Home Assistant offline</span>
+      &mdash; showing last known data where possible.
+    </p>
   {/if}
 
-  <!-- Current Readings -->
-  <section>
-    <SectionHeader title="Current Readings" icon="📡" />
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <section class="house__section reveal">
+    <SectionHeader numeral="II.II.01" title="Current Readings" meta="instruments.log" />
+    <div class="stat-grid">
       <StatCard
-        label="Indoor Temp"
-        value={data.ha.indoor ? `${Math.round(parseFloat(data.ha.indoor.state))}` : '--'}
+        label="Indoor temp"
+        value={data.ha.indoor ? `${Math.round(parseFloat(data.ha.indoor.state))}` : '—'}
         unit="°F"
-        icon="🌡️"
         sublabel={data.ha.humidity ? `${data.ha.humidity.state}% humidity` : ''}
         accent
       />
       <StatCard
-        label="Outdoor Temp"
-        value={data.ha.outdoor && data.ha.outdoor.state !== 'unavailable' ? `${Math.round(parseFloat(data.ha.outdoor.state))}` : '--'}
+        label="Outdoor temp"
+        value={data.ha.outdoor && data.ha.outdoor.state !== 'unavailable' ? `${Math.round(parseFloat(data.ha.outdoor.state))}` : '—'}
         unit="°F"
-        icon="🌿"
-        sublabel={data.ha.hvac ? `HVAC: ${data.ha.hvac.state}` : ''}
+        sublabel={data.ha.hvac ? `HVAC ${data.ha.hvac.state}` : ''}
       />
       <StatCard
         label="Security"
-        value={data.ha.alarm ? (alarmLabels[data.ha.alarm.state] ?? data.ha.alarm.state) : '--'}
-        icon="🔒"
+        value={data.ha.alarm ? (alarmLabels[data.ha.alarm.state] ?? data.ha.alarm.state) : '—'}
       />
       <StatCard
         label="Network"
-        value={data.ha.download ? formatSpeed(parseFloat(data.ha.download.state)) : '--'}
-        icon="📡"
+        value={data.ha.download ? formatSpeed(parseFloat(data.ha.download.state)) : '—'}
         sublabel={data.ha.upload ? `↑ ${formatSpeed(parseFloat(data.ha.upload.state))}` : ''}
       />
     </div>
   </section>
 
-  <!-- Temperature History -->
   {#if data.charts.indoorTemp.length > 0 || data.charts.outdoorTemp.length > 0}
-    <section>
-      <SectionHeader title="Temperature — Last 7 Days" icon="🌡️" />
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class="house__section reveal">
+      <SectionHeader numeral="II.II.02" title="Temperature" meta="7-day history" />
+      <div class="figure-grid">
         {#if data.charts.indoorTemp.length > 0}
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Indoor (°F)</p>
-            <LineChart
-              labels={data.charts.indoorTemp.map(p => p.time)}
-              data={data.charts.indoorTemp.map(p => p.value)}
-              label="Indoor °F"
-              color="#7dd3fc"
-              unit="°"
-            />
-          </div>
+          <figure class="dossier-figure">
+            <p class="dossier-kicker">Figure I &middot; Indoor (°F)</p>
+            <div class="dossier-figure__body">
+              <LineChart
+                labels={data.charts.indoorTemp.map(p => p.time)}
+                data={data.charts.indoorTemp.map(p => p.value)}
+                label="Indoor °F"
+                unit="°"
+              />
+            </div>
+          </figure>
         {/if}
         {#if data.charts.outdoorTemp.length > 0}
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Outdoor (°F)</p>
-            <LineChart
-              labels={data.charts.outdoorTemp.map(p => p.time)}
-              data={data.charts.outdoorTemp.map(p => p.value)}
-              label="Outdoor °F"
-              color="#38bdf8"
-              unit="°"
-            />
-          </div>
+          <figure class="dossier-figure">
+            <p class="dossier-kicker">Figure II &middot; Outdoor (°F)</p>
+            <div class="dossier-figure__body">
+              <LineChart
+                labels={data.charts.outdoorTemp.map(p => p.time)}
+                data={data.charts.outdoorTemp.map(p => p.value)}
+                label="Outdoor °F"
+                unit="°"
+              />
+            </div>
+          </figure>
         {/if}
       </div>
     </section>
   {/if}
 
-  <!-- Entertainment -->
-  <section>
-    <SectionHeader title="Entertainment" icon="📺" />
-    <div class="flex flex-wrap gap-3 mb-5">
+  <section class="house__section reveal">
+    <SectionHeader numeral="II.II.03" title="Entertainment" meta="status + on-time" />
+    <div class="badges">
       <StatusBadge label="Living Room TV" active={data.ha.livingTV?.state === 'on' || data.ha.livingTV?.state === 'playing'} />
       <StatusBadge label="Bedroom TV" active={data.ha.bedroomTV?.state === 'on' || data.ha.bedroomTV?.state === 'playing'} />
       <StatusBadge
@@ -142,39 +140,33 @@
       />
     </div>
     {#if data.ha.gamerscore}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Gamerscore" value={parseInt(data.ha.gamerscore.state).toLocaleString()} unit="pts" icon="🎮" />
+      <div class="stat-grid">
+        <StatCard label="Gamerscore" value={parseInt(data.ha.gamerscore.state).toLocaleString()} unit="pts" />
       </div>
     {/if}
 
-    <!-- TV on-time — rolling window, switchable range -->
-    <div class="mt-6">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p class="text-sm font-medium text-slate-600 dark:text-slate-300">
-          TV on-time — <span class="text-slate-500 dark:text-slate-400">{rangeLabels[data.range]}</span>
-        </p>
-        <div class="inline-flex rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1" role="group" aria-label="Time range">
-          {#each rangeOptions as opt}
-            <a
-              href="?range={opt.value}"
-              data-sveltekit-noscroll
-              aria-current={data.range === opt.value ? 'page' : undefined}
-              class="px-3 py-1 text-xs font-medium rounded-md transition-colors {data.range === opt.value
-                ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}"
-            >
-              {opt.label}
-            </a>
-          {/each}
-        </div>
+    <div class="house__range">
+      <p class="house__range-label">
+        TV on-time &mdash; <em>{rangeLabels[data.range]}</em>
+      </p>
+      <div class="house__range-tabs" role="group" aria-label="Time range">
+        {#each rangeOptions as opt}
+          <a
+            href="?range={opt.value}"
+            data-sveltekit-noscroll
+            aria-current={data.range === opt.value ? 'page' : undefined}
+            class="house__range-tab"
+            class:house__range-tab--active={data.range === opt.value}
+          >{opt.label}</a>
+        {/each}
       </div>
+    </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <div class="flex items-baseline justify-between mb-3">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Bedroom TV (hrs)</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500">{coverageNote(data.tvCoverage.bedroomDays, data.tvCoverage.requestedDays)}</p>
-          </div>
+    <div class="figure-grid">
+      <figure class="dossier-figure">
+        <p class="dossier-kicker">Figure III &middot; Bedroom TV (hrs)</p>
+        <p class="house__coverage">{coverageNote(data.tvCoverage.bedroomDays, data.tvCoverage.requestedDays)}</p>
+        <div class="dossier-figure__body">
           <BarChart
             labels={data.charts.bedroomTVHours.map(d => d.time)}
             data={data.charts.bedroomTVHours.map(d => d.hours)}
@@ -182,11 +174,11 @@
             unit="h"
           />
         </div>
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <div class="flex items-baseline justify-between mb-3">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Living Room TV (hrs)</p>
-            <p class="text-xs text-slate-400 dark:text-slate-500">{coverageNote(data.tvCoverage.livingDays, data.tvCoverage.requestedDays)}</p>
-          </div>
+      </figure>
+      <figure class="dossier-figure">
+        <p class="dossier-kicker">Figure IV &middot; Living Room TV (hrs)</p>
+        <p class="house__coverage">{coverageNote(data.tvCoverage.livingDays, data.tvCoverage.requestedDays)}</p>
+        <div class="dossier-figure__body">
           <BarChart
             labels={data.charts.livingTVHours.map(d => d.time)}
             data={data.charts.livingTVHours.map(d => d.hours)}
@@ -194,25 +186,22 @@
             unit="h"
           />
         </div>
-      </div>
+      </figure>
     </div>
   </section>
 
-  <!-- 7-Day Forecast -->
   {#if data.forecast.length > 0}
-    <section>
-      <SectionHeader title="7-Day Forecast" icon="🌤️" />
-      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-        <div class="grid grid-cols-7 gap-2">
+    <section class="house__section reveal">
+      <SectionHeader numeral="II.II.04" title="The Forecast" meta="7 days, Taneytown" />
+      <div class="dossier-figure">
+        <div class="forecast">
           {#each data.forecast as day}
-            {@const icons: Record<number, string> = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 51: '🌦️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 80: '🌦️', 95: '⛈️' }}
-            <div class="flex flex-col items-center text-center gap-1 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-              <span class="text-xs text-slate-400 dark:text-slate-500">{formatDate(day.date)}</span>
-              <span class="text-2xl">{icons[day.weatherCode] ?? '🌤️'}</span>
-              <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">{Math.round(day.tempMax)}°</span>
-              <span class="text-xs text-slate-400 dark:text-slate-500">{Math.round(day.tempMin)}°</span>
+            <div class="forecast__day">
+              <span class="forecast__date">{formatDate(day.date)}</span>
+              <span class="forecast__hi">{Math.round(day.tempMax)}°</span>
+              <span class="forecast__lo">{Math.round(day.tempMin)}°</span>
               {#if day.precipitationSum > 0}
-                <span class="text-xs text-sky-400">{day.precipitationSum.toFixed(2)}in</span>
+                <span class="forecast__rain">{day.precipitationSum.toFixed(2)}in</span>
               {/if}
             </div>
           {/each}
@@ -220,4 +209,158 @@
       </div>
     </section>
   {/if}
-</div>
+</article>
+
+<style>
+  .house__head { margin-bottom: 2rem; }
+  .house__title {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 4vw + 1rem, 4rem);
+    font-weight: 500;
+    line-height: 1;
+    margin: 0.75rem 0 1rem;
+    color: var(--color-ink-900);
+    font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  }
+  .house__title em {
+    font-style: italic;
+    color: var(--color-blood-500);
+    font-variation-settings: 'opsz' 144, 'SOFT' 100;
+  }
+  .house__lede {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    color: var(--color-ink-700);
+    line-height: 1.55;
+    max-width: 58ch;
+  }
+  .house__note {
+    margin: 0 0 2rem;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--color-ink-500);
+  }
+  .house__section { margin: 3rem 0; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0 2rem;
+  }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 900px) { .figure-grid { grid-template-columns: 1fr; } }
+
+  .house__coverage {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin: 0 0 0.75rem;
+  }
+
+  .house__range {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 2rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-paper-300);
+  }
+  .house__range-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-ink-700);
+    margin: 0;
+  }
+  .house__range-label em {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--color-blood-500);
+    font-weight: 400;
+    font-variation-settings: 'opsz' 24, 'SOFT' 100;
+  }
+  .house__range-tabs {
+    display: inline-flex;
+    border: 1px solid var(--color-paper-300);
+  }
+  .house__range-tab {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.9rem;
+    text-decoration: none;
+    color: var(--color-ink-500);
+    border-left: 1px solid var(--color-paper-300);
+    transition: background 0.15s, color 0.15s;
+  }
+  .house__range-tab:first-child { border-left: 0; }
+  .house__range-tab:hover { color: var(--color-ink-900); }
+  .house__range-tab--active {
+    background: var(--color-ink-900);
+    color: var(--color-paper-50);
+  }
+
+  .forecast {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    padding-top: 0.5rem;
+  }
+  .forecast__day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0.75rem 0.35rem;
+    border-right: 1px solid var(--color-paper-300);
+    gap: 0.2rem;
+  }
+  .forecast__day:last-child { border-right: 0; }
+  .forecast__date {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin-bottom: 0.35rem;
+  }
+  .forecast__hi {
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--color-ink-900);
+  }
+  .forecast__lo {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--color-ink-500);
+  }
+  .forecast__rain {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--color-blood-500);
+    margin-top: 0.2rem;
+  }
+</style>

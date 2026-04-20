@@ -8,8 +8,8 @@
     labels,
     data,
     label = 'Value',
-    color = '#7dd3fc',
-    fill = true,
+    color,
+    fill = false,
     unit = ''
   }: {
     labels: string[];
@@ -23,10 +23,21 @@
   let canvas: HTMLCanvasElement;
   let chart: Chart;
 
+  function cssVar(name: string, fallback: string): string {
+    if (typeof window === 'undefined') return fallback;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
   onMount(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
+    const ink       = cssVar('--color-ink-900', '#1a1612');
+    const inkMuted  = cssVar('--color-ink-500', '#6b6355');
+    const paper100  = cssVar('--color-paper-100', '#f5efdf');
+    const paper300  = cssVar('--color-paper-300', '#d6c9a5');
+    const blood     = cssVar('--color-blood-500', '#7a1f1f');
+    const line      = color || ink;
+    const fontBody  = "Inter Tight, system-ui, sans-serif";
+    const fontMono  = "JetBrains Mono, ui-monospace, monospace";
 
     chart = new Chart(canvas, {
       type: 'line',
@@ -35,40 +46,51 @@
         datasets: [{
           label,
           data,
-          borderColor: color,
-          backgroundColor: fill ? `${color}20` : 'transparent',
+          borderColor: line,
+          backgroundColor: fill ? `${line}1A` : 'transparent',
           fill,
-          tension: 0.3,
-          pointRadius: data.length > 30 ? 0 : 3,
-          pointHoverRadius: 5,
-          borderWidth: 2
+          tension: 0.25,
+          pointRadius: data.length > 30 ? 0 : 2.5,
+          pointHoverRadius: 4,
+          pointHoverBorderColor: blood,
+          pointHoverBackgroundColor: blood,
+          borderWidth: 1.25
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 1000, easing: 'easeOutQuart' },
+        animation: { duration: 800, easing: 'easeOutQuart' },
         plugins: {
           tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            titleColor: isDark ? '#e2e8f0' : '#1e293b',
-            bodyColor: isDark ? '#cbd5e1' : '#475569',
-            borderColor: isDark ? '#334155' : '#e2e8f0',
+            backgroundColor: paper100,
+            titleColor: ink,
+            bodyColor: ink,
+            borderColor: ink,
             borderWidth: 1,
-            cornerRadius: 8,
-            padding: 10
+            cornerRadius: 0,
+            padding: 10,
+            titleFont: { family: fontBody, weight: 'bold', size: 11 },
+            bodyFont: { family: fontMono, size: 11 },
+            displayColors: false
           }
         },
         scales: {
           x: {
-            grid: { color: gridColor },
-            ticks: { color: textColor, font: { size: 11 }, maxTicksLimit: 10 }
+            grid: { color: paper300, lineWidth: 0.5 },
+            border: { color: ink, width: 1 },
+            ticks: {
+              color: inkMuted,
+              font: { family: fontMono, size: 10 },
+              maxTicksLimit: 10
+            }
           },
           y: {
-            grid: { color: gridColor },
+            grid: { color: paper300, lineWidth: 0.5 },
+            border: { color: ink, width: 1 },
             ticks: {
-              color: textColor,
-              font: { size: 11 },
+              color: inkMuted,
+              font: { family: fontMono, size: 10 },
               callback: (val) => (unit ? `${val}${unit}` : String(val))
             },
             beginAtZero: true

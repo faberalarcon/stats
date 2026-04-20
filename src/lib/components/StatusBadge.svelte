@@ -12,15 +12,49 @@
   } = $props();
 </script>
 
-<div class="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium border transition-colors {active
-  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}">
-  <span class="relative flex h-2 w-2">
-    {#if active}
-      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-    {/if}
-    <span class="relative inline-flex rounded-full h-2 w-2 {active ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'}"></span>
-  </span>
-  <span>{label}</span>
-  <span class="text-xs">{active ? activeText : inactiveText}</span>
-</div>
+<span class="badge" class:badge--active={active}>
+  <span class="badge__dot" aria-hidden="true"></span>
+  <span class="badge__label">{label}</span>
+  <span class="badge__state">&middot; {active ? activeText : inactiveText}</span>
+</span>
+
+<style>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--color-paper-300);
+    color: var(--color-ink-500);
+    background: transparent;
+  }
+  .badge--active {
+    border-color: var(--color-olive-500);
+    color: var(--color-olive-500);
+  }
+  .badge__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 18%, transparent);
+  }
+  .badge--active .badge__dot {
+    animation: badge-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 25%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in oklab, currentColor 5%, transparent); }
+  }
+  .badge__state {
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    color: inherit;
+    opacity: 0.75;
+  }
+</style>

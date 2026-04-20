@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   let {
     label,
     value,
     unit = '',
-    icon = '',
     sublabel = '',
     accent = false
   }: {
@@ -17,7 +16,6 @@
     accent?: boolean;
   } = $props();
 
-  // Count-up on mount for numeric values only. Non-numeric strings render as-is.
   function parseNumeric(raw: string | number): { num: number; prefix: string; suffix: string } | null {
     const s = String(raw).trim();
     const m = s.match(/^(-?[\d,]+\.?\d*)(.*)$/);
@@ -28,9 +26,9 @@
     return { num: n, prefix: '', suffix: m[2] };
   }
 
-  const parsed = parseNumeric(value);
+  const parsed = untrack(() => parseNumeric(value));
   const target = parsed?.num ?? 0;
-  let display = $state<string>(parsed ? formatNum(0, target) : String(value));
+  let display = $state<string>(parsed ? formatNum(0, target) : untrack(() => String(value)));
 
   function formatNum(n: number, ref: number): string {
     const decimals = Number.isInteger(ref) ? 0 : Math.min(2, String(ref).split('.')[1]?.length ?? 0);
@@ -61,23 +59,63 @@
   });
 </script>
 
-<div
-  class="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-5 transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 hover:-translate-y-0.5"
-  class:ring-2={accent}
-  class:ring-sky-300={accent}
->
-  <div class="flex items-start justify-between gap-2">
-    <div class="min-w-0 flex-1">
-      <p class="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 leading-tight">{label}</p>
-      <p class="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-tight tabular-nums">
-        {display}<span class="text-xs sm:text-sm font-normal text-slate-400 dark:text-slate-500 ml-1">{unit}</span>
-      </p>
-      {#if sublabel}
-        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500 leading-tight">{sublabel}</p>
-      {/if}
-    </div>
-    {#if icon}
-      <span class="text-xl sm:text-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">{icon}</span>
-    {/if}
-  </div>
-</div>
+<article class="stat" class:stat--accent={accent}>
+  <p class="stat__label">{label}</p>
+  <p class="stat__value">
+    {display}{#if unit}<span class="stat__unit">{unit}</span>{/if}
+  </p>
+  {#if sublabel}
+    <p class="stat__sub">{sublabel}</p>
+  {/if}
+</article>
+
+<style>
+  .stat {
+    border-top: 1px solid var(--color-ink-900);
+    padding: 1.25rem 0.1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    background: transparent;
+    position: relative;
+  }
+  .stat--accent { border-top-color: var(--color-blood-500); border-top-width: 2px; }
+  .stat__label {
+    font-family: var(--font-body);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin: 0;
+  }
+  .stat__value {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero';
+    font-size: clamp(1.75rem, 2.5vw + 0.5rem, 2.75rem);
+    font-weight: 500;
+    line-height: 1.05;
+    color: var(--color-ink-900);
+    margin: 0;
+    letter-spacing: -0.02em;
+    word-break: break-word;
+  }
+  .stat--accent .stat__value { color: var(--color-blood-500); }
+  .stat__unit {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+    margin-left: 0.3rem;
+  }
+  .stat__sub {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.8125rem;
+    color: var(--color-ink-500);
+    margin: 0;
+    line-height: 1.35;
+  }
+</style>

@@ -23,12 +23,21 @@
   let canvas: HTMLCanvasElement;
   let chart: Chart;
 
-  const defaultColor = '#7dd3fc';
+  function cssVar(name: string, fallback: string): string {
+    if (typeof window === 'undefined') return fallback;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
 
   onMount(() => {
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(148,163,184,0.2)';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
+    const ink       = cssVar('--color-ink-900', '#1a1612');
+    const inkMuted  = cssVar('--color-ink-500', '#6b6355');
+    const paper100  = cssVar('--color-paper-100', '#f5efdf');
+    const paper300  = cssVar('--color-paper-300', '#d6c9a5');
+    const blood     = cssVar('--color-blood-500', '#7a1f1f');
+    const defaultColor = ink;
+    const fontBody  = "Inter Tight, system-ui, sans-serif";
+    const fontMono  = "JetBrains Mono, ui-monospace, monospace";
 
     chart = new Chart(canvas, {
       type: 'bar',
@@ -38,44 +47,51 @@
           label,
           data,
           backgroundColor: colors.length > 0 ? colors : data.map(() => defaultColor),
-          borderRadius: 6,
-          borderSkipped: false
+          hoverBackgroundColor: blood,
+          borderRadius: 0,
+          borderSkipped: false,
+          barPercentage: 0.75,
+          categoryPercentage: 0.85
         }]
       },
       options: {
         indexAxis: horizontal ? 'y' : 'x',
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 800, easing: 'easeOutQuart' },
+        animation: { duration: 700, easing: 'easeOutQuart' },
         plugins: {
           tooltip: {
-            backgroundColor: isDark ? '#1e293b' : '#ffffff',
-            titleColor: isDark ? '#e2e8f0' : '#1e293b',
-            bodyColor: isDark ? '#cbd5e1' : '#475569',
-            borderColor: isDark ? '#334155' : '#e2e8f0',
+            backgroundColor: paper100,
+            titleColor: ink,
+            bodyColor: ink,
+            borderColor: ink,
             borderWidth: 1,
-            cornerRadius: 8,
-            padding: 10
+            cornerRadius: 0,
+            padding: 10,
+            titleFont: { family: fontBody, weight: 'bold', size: 11 },
+            bodyFont: { family: fontMono, size: 11 },
+            displayColors: false
           }
         },
         scales: {
           x: {
-            grid: { color: gridColor },
+            grid: { color: paper300, lineWidth: 0.5 },
+            border: { color: ink, width: 1 },
             ticks: {
-              color: textColor,
-              font: { size: 11 },
+              color: inkMuted,
+              font: { family: fontMono, size: 10 },
               callback: function (val) {
                 if (horizontal && unit) return `${val}${unit}`;
-                // x axis on vertical bars shows category labels — let Chart.js default handle them
                 return (this as { getLabelForValue: (v: number) => string }).getLabelForValue(val as number);
               }
             }
           },
           y: {
-            grid: { color: gridColor },
+            grid: { color: paper300, lineWidth: 0.5 },
+            border: { color: ink, width: 1 },
             ticks: {
-              color: textColor,
-              font: { size: 11 },
+              color: inkMuted,
+              font: { family: fontMono, size: 10 },
               callback: function (val) {
                 if (!horizontal && unit) return `${val}${unit}`;
                 return (this as { getLabelForValue: (v: number) => string }).getLabelForValue(val as number);
@@ -91,9 +107,10 @@
 
   $effect(() => {
     if (!chart) return;
+    const ink = cssVar('--color-ink-900', '#1a1612');
     chart.data.labels = labels;
     chart.data.datasets[0].data = data;
-    chart.data.datasets[0].backgroundColor = colors.length > 0 ? colors : data.map(() => defaultColor);
+    chart.data.datasets[0].backgroundColor = colors.length > 0 ? colors : data.map(() => ink);
     chart.update();
   });
 </script>

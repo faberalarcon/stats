@@ -16,9 +16,7 @@
   function formatDate(dateStr: string): string {
     try {
       return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+    } catch { return dateStr; }
   }
 
   function formatHour(h: string): string {
@@ -27,174 +25,279 @@
     if (hour === 12) return '12 PM';
     return hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
   }
+
+  const leaderLabels = { allTime: 'All Time', thisWeek: 'This Week', today: 'Today' } as const;
+  const topLabels = { allTime: 'All Time', thisWeek: 'This Week' } as const;
 </script>
 
 <svelte:head>
-  <title>Drinks — 21 Bristoe Stats</title>
-  <meta name="description" content="Drink Hub stats and leaderboards" />
+  <title>The Tap Log — § II.III · 21 Bristoe</title>
+  <meta name="description" content="Drink Hub ledger — § II.III of the Residence Dossier" />
 </svelte:head>
 
-<div class="space-y-10">
-  <div class="text-center pb-2">
-    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight">
-      <span class="text-accent">Drink Hub</span> Stats
-    </h1>
-    <p class="mt-2 text-slate-500 dark:text-slate-400">Order history, leaderboards, and trends</p>
-  </div>
+<article class="drinks">
+  <header class="drinks__head reveal">
+    <p class="dossier-kicker">§ II.III &middot; The Tap Log</p>
+    <h1 class="drinks__title">Pours, tallies,<br/><em>and a leaderboard.</em></h1>
+    <p class="drinks__lede">
+      Cross-referenced with &sect; III &middot; The Lounge. Every order appears
+      here within seconds &mdash; filterable by person, drink, category, and date.
+    </p>
+    <hr class="dossier-rule dossier-rule--ornate" />
+  </header>
 
   {#if s}
-    <FilterBar
-      profiles={s.profiles}
-      drinks={s.drinks}
-      filters={data.filters}
-    />
+    <FilterBar profiles={s.profiles} drinks={s.drinks} filters={data.filters} />
   {/if}
 
   {#if !s}
-    <div class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 p-6 text-center">
-      <p class="text-sky-700 dark:text-sky-400 font-medium">Drink Hub unavailable</p>
-      <p class="text-sm text-sky-600 dark:text-sky-500 mt-1">Could not connect to drink-hub API</p>
-    </div>
+    <p class="drinks__missing">
+      <span class="dossier-status dossier-status--alert">Drink Hub offline</span>
+      &mdash; could not reach the lounge API.
+    </p>
   {:else}
-    <!-- Totals -->
-    <section>
-      <SectionHeader title="Order Totals" icon="🍻" />
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="All Time" value={s.totals.allTime.toLocaleString()} icon="📊" accent />
-        <StatCard label="Today" value={s.totals.today} icon="📅" />
-        <StatCard label="This Week" value={s.totals.thisWeek} icon="📆" />
-        <StatCard label="This Month" value={s.totals.thisMonth} icon="🗓️" />
+    <section class="drinks__section reveal">
+      <SectionHeader numeral="II.III.01" title="Order Totals" meta="ledger.sum" />
+      <div class="stat-grid">
+        <StatCard label="All time" value={s.totals.allTime.toLocaleString()} accent />
+        <StatCard label="Today" value={s.totals.today} />
+        <StatCard label="This week" value={s.totals.thisWeek} />
+        <StatCard label="This month" value={s.totals.thisMonth} />
       </div>
     </section>
 
-    <!-- Leaderboard -->
-    <section>
-      <div class="flex items-center justify-between mb-4">
-        <SectionHeader title="Leaderboard" icon="🏆" />
-        <div class="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
+    <section class="drinks__section reveal">
+      <SectionHeader numeral="II.III.02" title="Leaderboard" meta={leaderLabels[leaderView]} />
+      <div class="tab-row">
+        {#each (['allTime', 'thisWeek', 'today'] as const) as view}
           <button
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors {leaderView === 'allTime' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
-            onclick={() => leaderView = 'allTime'}
-          >All Time</button>
+            class="tab"
+            class:tab--active={leaderView === view}
+            onclick={() => leaderView = view}
+          >{leaderLabels[view]}</button>
+        {/each}
+      </div>
+      <Leaderboard entries={s.leaderboard[leaderView]} />
+    </section>
+
+    <section class="drinks__section reveal">
+      <SectionHeader numeral="II.III.03" title="Top Drinks" meta={topLabels[topDrinksView]} />
+      <div class="tab-row">
+        {#each (['allTime', 'thisWeek'] as const) as view}
           <button
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors {leaderView === 'thisWeek' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
-            onclick={() => leaderView = 'thisWeek'}
-          >Week</button>
-          <button
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors {leaderView === 'today' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}"
-            onclick={() => leaderView = 'today'}
-          >Today</button>
+            class="tab"
+            class:tab--active={topDrinksView === view}
+            onclick={() => topDrinksView = view}
+          >{topLabels[view]}</button>
+        {/each}
+      </div>
+      <figure class="dossier-figure">
+        <p class="dossier-kicker">Figure V &middot; Ranked by order count</p>
+        <div class="dossier-figure__body">
+          {#key topDrinksView}
+            <BarChart
+              labels={s.topDrinks[topDrinksView].map(d => d.name)}
+              data={s.topDrinks[topDrinksView].map(d => d.count)}
+              horizontal
+              label="Orders"
+            />
+          {/key}
         </div>
-      </div>
-      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-        <Leaderboard entries={s.leaderboard[leaderView]} />
-      </div>
+      </figure>
     </section>
 
-    <!-- Top Drinks -->
-    <section>
-      <div class="flex items-center justify-between mb-4">
-        <SectionHeader title="Top Drinks" icon="🥤" />
-        <div class="flex gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
-          <button
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors {topDrinksView === 'allTime' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}"
-            onclick={() => topDrinksView = 'allTime'}
-          >All Time</button>
-          <button
-            class="px-3 py-1 text-xs font-medium rounded-md transition-colors {topDrinksView === 'thisWeek' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}"
-            onclick={() => topDrinksView = 'thisWeek'}
-          >Week</button>
-        </div>
-      </div>
-      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-        {#key topDrinksView}
-          <BarChart
-            labels={s.topDrinks[topDrinksView].map(d => d.name)}
-            data={s.topDrinks[topDrinksView].map(d => d.count)}
-            horizontal
-            label="Orders"
-          />
-        {/key}
-      </div>
-    </section>
-
-    <!-- Histograms -->
-    <section>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <SectionHeader title="Orders by Day of Week" icon="📊" />
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+    <section class="drinks__section reveal">
+      <div class="figure-grid">
+        <figure class="dossier-figure">
+          <p class="dossier-kicker">Figure VI &middot; Orders by day of week</p>
+          <div class="dossier-figure__body">
             <BarChart
               labels={s.dowHistogram.map(d => d.day)}
               data={s.dowHistogram.map(d => d.count)}
               label="Orders"
             />
           </div>
-        </div>
-        <div>
-          <SectionHeader title="Orders by Hour" icon="🕐" />
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+        </figure>
+        <figure class="dossier-figure">
+          <p class="dossier-kicker">Figure VII &middot; Orders by hour</p>
+          <div class="dossier-figure__body">
             <BarChart
               labels={s.hourHistogram.map(h => h.hour.toString().padStart(2, '0'))}
               data={s.hourHistogram.map(h => h.count)}
               label="Orders"
             />
           </div>
-        </div>
+        </figure>
       </div>
     </section>
 
-    <!-- Daily Timeline -->
     {#if s.dailyTimeline.length > 0}
-      <section>
-        <SectionHeader title="Orders Over Time (90 Days)" icon="📈" />
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <LineChart
-            labels={s.dailyTimeline.map(d => formatDate(d.date))}
-            data={s.dailyTimeline.map(d => d.count)}
-            label="Orders"
-          />
-        </div>
+      <section class="drinks__section reveal">
+        <SectionHeader numeral="II.III.04" title="Orders Over Time" meta="90-day timeline" />
+        <figure class="dossier-figure">
+          <p class="dossier-kicker">Figure VIII &middot; Daily orders</p>
+          <div class="dossier-figure__body">
+            <LineChart
+              labels={s.dailyTimeline.map(d => formatDate(d.date))}
+              data={s.dailyTimeline.map(d => d.count)}
+              label="Orders"
+            />
+          </div>
+        </figure>
       </section>
     {/if}
 
-    <!-- Fun Stats -->
-    <section>
-      <SectionHeader title="Fun Facts" icon="🎉" />
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <section class="drinks__section reveal">
+      <SectionHeader numeral="II.III.05" title="Fun Facts" meta="marginalia" />
+      <div class="stat-grid">
         {#if s.funStats.busiestDay}
-          <StatCard label="Busiest Day Ever" value="{s.funStats.busiestDay.count} orders" icon="🔥" sublabel={formatDate(s.funStats.busiestDay.date)} />
+          <StatCard
+            label="Busiest day"
+            value={`${s.funStats.busiestDay.count} orders`}
+            sublabel={formatDate(s.funStats.busiestDay.date)}
+          />
         {/if}
-        <StatCard label="Longest Streak" value="{s.funStats.longestStreak} days" icon="🔥" />
-        <StatCard label="Avg Per Day" value={s.funStats.avgPerDay} icon="📊" sublabel="on active days" />
+        <StatCard label="Longest streak" value={`${s.funStats.longestStreak} days`} />
+        <StatCard label="Avg per day" value={s.funStats.avgPerDay} sublabel="on active days" />
         {#if s.funStats.peakDay}
-          <StatCard label="Favorite Day" value={s.funStats.peakDay} icon="📅" />
+          <StatCard label="Favorite day" value={s.funStats.peakDay} />
         {/if}
         {#if s.funStats.peakHour}
-          <StatCard label="Peak Hour" value={formatHour(s.funStats.peakHour)} icon="🕐" />
+          <StatCard label="Peak hour" value={formatHour(s.funStats.peakHour)} />
         {/if}
-        <StatCard label="Drink Diversity" value="{s.funStats.diversityScore}%" icon="🎨" sublabel="unique drinks / total" />
+        <StatCard label="Drink diversity" value={`${s.funStats.diversityScore}%`} sublabel="unique / total" />
         {#if s.funStats.firstOrderDate}
-          <StatCard label="First Order" value={formatDate(s.funStats.firstOrderDate)} icon="🎂" />
+          <StatCard label="First order" value={formatDate(s.funStats.firstOrderDate)} />
         {/if}
       </div>
 
       {#if s.funStats.signatureDrinks.length > 0}
-        <div class="mt-6">
-          <h3 class="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">Signature Drinks</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {#each s.funStats.signatureDrinks as sig}
-              <div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {sig.profileColor}"></div>
-                <div class="min-w-0">
-                  <p class="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{sig.profileName}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">{sig.drinkName} &middot; {sig.count} orders</p>
-                </div>
+        <h3 class="drinks__sig-head">Signature drinks</h3>
+        <div class="sig-grid">
+          {#each s.funStats.signatureDrinks as sig}
+            <div class="sig">
+              <span class="sig__dot" style="background-color: {sig.profileColor}"></span>
+              <div class="sig__body">
+                <p class="sig__name">{sig.profileName}</p>
+                <p class="sig__drink">{sig.drinkName} &middot; {sig.count} orders</p>
               </div>
-            {/each}
-          </div>
+            </div>
+          {/each}
         </div>
       {/if}
     </section>
   {/if}
-</div>
+</article>
+
+<style>
+  .drinks__head { margin-bottom: 2rem; }
+  .drinks__title {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 4vw + 1rem, 4rem);
+    font-weight: 500;
+    line-height: 1;
+    margin: 0.75rem 0 1rem;
+    color: var(--color-ink-900);
+    font-variation-settings: 'opsz' 144, 'SOFT' 30;
+  }
+  .drinks__title em {
+    font-style: italic;
+    color: var(--color-blood-500);
+    font-variation-settings: 'opsz' 144, 'SOFT' 100;
+  }
+  .drinks__lede {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    color: var(--color-ink-700);
+    line-height: 1.55;
+    max-width: 58ch;
+  }
+  .drinks__missing {
+    margin: 0 0 2rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    color: var(--color-ink-500);
+  }
+  .drinks__section { margin: 3rem 0; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0 2rem;
+  }
+  .figure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 900px) { .figure-grid { grid-template-columns: 1fr; } }
+
+  .tab-row {
+    display: inline-flex;
+    border: 1px solid var(--color-paper-300);
+    margin-bottom: 1.25rem;
+  }
+  .tab {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.9rem;
+    background: transparent;
+    border: 0;
+    border-left: 1px solid var(--color-paper-300);
+    color: var(--color-ink-500);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab:first-child { border-left: 0; }
+  .tab:hover { color: var(--color-ink-900); }
+  .tab--active {
+    background: var(--color-ink-900);
+    color: var(--color-paper-50);
+  }
+
+  .drinks__sig-head {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-blood-500);
+    margin: 2rem 0 1rem;
+  }
+  .sig-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.9rem;
+  }
+  .sig {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    border: 1px solid var(--color-paper-300);
+    padding: 0.85rem 1rem;
+    background: var(--color-paper-100);
+  }
+  .sig__dot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+  .sig__name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--color-ink-900);
+    font-size: 1rem;
+    margin: 0;
+    font-variation-settings: 'opsz' 24, 'SOFT' 30;
+  }
+  .sig__drink {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    color: var(--color-ink-500);
+    margin: 0.15rem 0 0;
+  }
+</style>

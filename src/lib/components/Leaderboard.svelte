@@ -7,29 +7,95 @@
     maxCount?: number;
   } = $props();
 
-  const max = maxCount > 0 ? maxCount : Math.max(...entries.map((e) => e.count), 1);
+  const max = $derived(maxCount > 0 ? maxCount : Math.max(...entries.map((e) => e.count), 1));
+
+  function roman(n: number): string {
+    const vals: [number, string][] = [
+      [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    ];
+    let out = '';
+    for (const [v, s] of vals) { while (n >= v) { out += s; n -= v; } }
+    return out || 'I';
+  }
 </script>
 
-<div class="space-y-2">
-  {#each entries as entry, i}
-    <div class="flex items-center gap-3">
-      <span class="text-sm font-medium text-slate-500 dark:text-slate-400 w-5 text-right">{i + 1}</span>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{entry.name}</span>
-          <span class="text-sm font-bold text-slate-600 dark:text-slate-300 ml-2">{entry.count}</span>
-        </div>
-        <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-          <div
-            class="h-full rounded-full transition-all duration-700 ease-out"
-            style="width: {Math.max((entry.count / max) * 100, 2)}%; background-color: {entry.color}"
-          ></div>
-        </div>
-      </div>
-    </div>
-  {/each}
+<table class="dossier-table ledger">
+  <thead>
+    <tr>
+      <th class="rank">№</th>
+      <th>Name</th>
+      <th class="num">Count</th>
+      <th class="share" aria-hidden="true"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {#each entries as entry, i}
+      <tr>
+        <td class="rank">{roman(i + 1)}</td>
+        <td class="name">
+          <span class="name__dot" aria-hidden="true" style="background:{entry.color}"></span>
+          {entry.name}
+        </td>
+        <td class="num">{entry.count.toLocaleString()}</td>
+        <td class="share">
+          <span class="share__bar">
+            <span
+              class="share__fill"
+              style="width:{Math.max((entry.count / max) * 100, 2)}%;background:{entry.color}"
+            ></span>
+          </span>
+        </td>
+      </tr>
+    {/each}
 
-  {#if entries.length === 0}
-    <p class="text-sm text-slate-400 dark:text-slate-500 text-center py-4">No data yet</p>
-  {/if}
-</div>
+    {#if entries.length === 0}
+      <tr>
+        <td colspan="4" class="empty">No data yet</td>
+      </tr>
+    {/if}
+  </tbody>
+</table>
+
+<style>
+  .ledger .rank {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--color-blood-500);
+    width: 3rem;
+    font-size: 0.95rem;
+    font-variation-settings: 'opsz' 48, 'SOFT' 100;
+  }
+  .ledger .name {
+    font-family: var(--font-body);
+    color: var(--color-ink-900);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .name__dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+  .ledger .share { width: 34%; min-width: 80px; }
+  .share__bar {
+    display: block;
+    height: 6px;
+    background: var(--color-paper-200);
+    overflow: hidden;
+  }
+  .share__fill {
+    display: block;
+    height: 100%;
+    transition: width 0.6s ease-out;
+  }
+  .ledger td.empty {
+    text-align: center;
+    font-style: italic;
+    color: var(--color-ink-500);
+    padding: 1.75rem 0;
+  }
+</style>
