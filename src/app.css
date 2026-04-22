@@ -157,13 +157,13 @@ h1, h2, h3, h4 {
   font-family: var(--font-display);
   color: var(--color-ink-900);
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   line-height: 1.05;
   font-variation-settings: 'opsz' 72, 'SOFT' 30;
 }
 h1 {
   font-size: clamp(2.75rem, 6vw + 1rem, 5.75rem);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   font-variation-settings: 'opsz' 144, 'SOFT' 50;
 }
 h2 {
@@ -230,7 +230,9 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
 
 /* Masthead — top band across every page */
 .dossier-masthead {
-  background: var(--color-blood-600);
+  background: color-mix(in oklab, var(--color-paper-50) 92%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-paper-300) 82%, transparent);
+  backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -240,7 +242,7 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
   margin: 0 auto;
   padding: 0.875rem 1.5rem;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 1.5rem;
   justify-content: space-between;
 }
@@ -248,14 +250,14 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
   font-family: var(--font-display);
   font-weight: 500;
   font-size: 1.5rem;
-  color: white;
-  letter-spacing: -0.01em;
+  color: var(--color-ink-900);
+  letter-spacing: 0;
   font-variation-settings: 'opsz' 48, 'SOFT' 30;
   text-decoration: none;
 }
 .dossier-masthead__wordmark em {
   font-style: italic;
-  color: var(--color-leaf-300);
+  color: var(--color-blood-500);
   font-weight: 400;
 }
 .dossier-masthead__volume {
@@ -263,13 +265,13 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
   font-size: 0.6875rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-ink-300);
   white-space: nowrap;
 }
 .dossier-masthead__nav {
   display: flex;
   gap: 1.25rem;
-  align-items: baseline;
+  align-items: center;
 }
 .dossier-masthead__nav a {
   font-family: var(--font-body);
@@ -277,7 +279,7 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-ink-500);
   text-decoration: none;
   padding-bottom: 2px;
   border-bottom: 1px solid transparent;
@@ -286,8 +288,8 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
 .dossier-masthead__nav a:hover,
 .dossier-masthead__nav a[aria-current="page"],
 .dossier-masthead__nav a.is-current {
-  color: white;
-  border-bottom-color: rgba(255, 255, 255, 0.55);
+  color: var(--color-blood-500);
+  border-bottom-color: var(--color-blood-500);
 }
 .dossier-masthead__nav .nav-numeral {
   font-family: var(--font-display);

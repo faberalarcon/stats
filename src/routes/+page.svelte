@@ -39,7 +39,7 @@
 
   {#if data.visitors}
     <section class="overview__section reveal">
-      <SectionHeader numeral="II.01" title="Callers" meta="cover.log" />
+      <SectionHeader title="Callers" />
       <div class="stat-grid">
         <StatCard
           label="Unique callers"
@@ -53,7 +53,7 @@
 
   {#if data.weather}
     <section class="overview__section reveal">
-      <SectionHeader numeral="II.03" title="The Weather" meta="Taneytown, Md." />
+      <SectionHeader title="The Weather" meta="Taneytown, Md." />
 
       <div class="weather">
         <div class="dossier-figure weather__current">
@@ -114,7 +114,7 @@
   {/if}
 
   <section class="overview__section reveal">
-    <SectionHeader numeral="II.04" title="Entertainment" meta="status.log" />
+    <SectionHeader title="Entertainment" />
     <div class="badges">
       {#each data.ha.tvs as tv}
         <StatusBadge label={tv.name} active={tv.on} />
@@ -131,7 +131,7 @@
   </section>
 
   <section class="overview__section reveal">
-    <SectionHeader numeral="II.05" title="Limón" meta={`Today ${data.ha.outdoor ? Math.round(data.ha.outdoor.temp) + '°F' : ''} outside`} />
+    <SectionHeader title="Limón" meta={`Today ${data.ha.outdoor ? Math.round(data.ha.outdoor.temp) + '°F' : ''} outside`} />
     <p class="overview__caption">Daily readings from our resident expert, Limón — purely apocryphal.</p>
     <div class="stat-grid">
       {#each data.limonStats as stat}
