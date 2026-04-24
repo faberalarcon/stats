@@ -117,11 +117,11 @@
     gap: 1.5rem;
   }
   .app-footer__links a {
-    color: var(--color-leaf-300);
+    color: var(--color-blood-300);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     padding-bottom: 1px;
     transition: border-color 0.2s;
   }
-  .app-footer__links a:hover { border-bottom-color: var(--color-leaf-300); }
+  .app-footer__links a:hover { border-bottom-color: var(--color-blood-300); }
 </style>
