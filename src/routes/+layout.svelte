@@ -24,7 +24,6 @@
     <a class="app-header__brand" href="https://21bristoe.com">
       21 Bristoe <em>Stats</em>
     </a>
-    <HubNav current="stats" />
     <nav class="app-header__nav" aria-label="Stats sections">
       {#each navLinks as link}
         <a
@@ -35,6 +34,7 @@
         </a>
       {/each}
     </nav>
+    <HubNav current="stats" />
   </div>
 </header>
 
