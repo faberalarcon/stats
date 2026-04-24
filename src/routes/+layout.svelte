@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import HubNav from '$lib/components/HubNav.svelte';
 
-  let { children } = $props();
+  let { children, data } = $props();
 
   const navLinks = [
     { href: '/',        label: 'Overview' },
@@ -58,6 +58,12 @@
         <a href="https://drink-hub.21bristoe.com">Drink Hub</a>
       </div>
     </div>
+    {#if data.visitorCount !== null}
+      <div class="app-footer__visitors">
+        <span class="app-footer__count">{(data.visitorCount as number).toLocaleString()}</span>
+        <span>unique visitors so far</span>
+      </div>
+    {/if}
   </div>
 </footer>
 
@@ -128,4 +134,21 @@
     transition: border-color 0.2s;
   }
   .app-footer__links a:hover { border-bottom-color: var(--color-blood-300); }
+  .app-footer__visitors {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(245, 239, 223, 0.1);
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--color-paper-100);
+    opacity: 0.6;
+  }
+  .app-footer__count {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--color-paper-50);
+    opacity: 1;
+    margin-right: 0.25em;
+  }
 </style>
