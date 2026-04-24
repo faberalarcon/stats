@@ -1,6 +1,5 @@
 <script lang="ts">
   import StatCard from '$lib/components/StatCard.svelte';
-  import StatusBadge from '$lib/components/StatusBadge.svelte';
   import SectionHeader from '$lib/components/SectionHeader.svelte';
 
   let { data } = $props();
@@ -141,16 +140,6 @@
   {/if}
 
   <section class="overview__section reveal">
-    <SectionHeader title="Entertainment" />
-    <div class="badges">
-      {#each data.ha.tvs as tv}
-        <StatusBadge label={tv.name} active={tv.on} />
-      {/each}
-      <StatusBadge label="Xbox" active={data.ha.xbox.on} activeText={data.ha.xbox.nowPlaying ?? 'On'} />
-    </div>
-  </section>
-
-  <section class="overview__section reveal">
     <SectionHeader title="Limón" meta={data.ha.outdoor ? `${Math.round(data.ha.outdoor.temp)}°F outside` : ''} />
     <div class="stat-grid">
       {#each data.limonStats as stat}
@@ -196,13 +185,6 @@
   }
 
   .stat-grid--tight { margin-top: 1.5rem; }
-
-  .badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
 
   .weather {
     display: grid;
