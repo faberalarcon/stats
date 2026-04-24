@@ -34,8 +34,8 @@
     background: transparent;
   }
   .badge--active {
-    border-color: var(--color-olive-500);
-    color: var(--color-olive-500);
+    border-color: var(--color-status-on);
+    color: var(--color-status-on);
   }
   .badge__dot {
     width: 7px;
