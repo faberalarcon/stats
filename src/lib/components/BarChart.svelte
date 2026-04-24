@@ -29,6 +29,11 @@
     return v || fallback;
   }
 
+  function resolveColor(c: string, fallback: string): string {
+    if (c.startsWith('var(--')) return cssVar(c.slice(4, -1), fallback);
+    return c;
+  }
+
   onMount(() => {
     const ink       = cssVar('--color-ink-900', '#1a1612');
     const inkMuted  = cssVar('--color-ink-500', '#6b6355');
@@ -46,7 +51,7 @@
         datasets: [{
           label,
           data,
-          backgroundColor: colors.length > 0 ? colors : data.map(() => defaultColor),
+          backgroundColor: colors.length > 0 ? colors.map(c => resolveColor(c, defaultColor)) : data.map(() => defaultColor),
           hoverBackgroundColor: blood,
           borderRadius: 0,
           borderSkipped: false,
@@ -115,7 +120,7 @@
     const ink = cssVar('--color-ink-900', '#1a1612');
     chart.data.labels = labels;
     chart.data.datasets[0].data = data;
-    chart.data.datasets[0].backgroundColor = colors.length > 0 ? colors : data.map(() => ink);
+    chart.data.datasets[0].backgroundColor = colors.length > 0 ? colors.map(c => resolveColor(c, ink)) : data.map(() => ink);
     chart.update();
   });
 </script>

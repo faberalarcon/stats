@@ -31,13 +31,18 @@
     return v || fallback;
   }
 
+  function resolveColor(c: string, fallback: string): string {
+    if (c.startsWith('var(--')) return cssVar(c.slice(4, -1), fallback);
+    return c;
+  }
+
   onMount(() => {
     const ink       = cssVar('--color-ink-900', '#1a1612');
     const inkMuted  = cssVar('--color-ink-500', '#6b6355');
     const paper100  = cssVar('--color-paper-100', '#f5efdf');
     const paper300  = cssVar('--color-paper-300', '#d6c9a5');
     const blood     = cssVar('--color-blood-500', '#7a1f1f');
-    const line      = color || ink;
+    const line      = color ? resolveColor(color, ink) : ink;
     const fontBody  = "Inter Tight, system-ui, sans-serif";
     const fontMono  = "JetBrains Mono, ui-monospace, monospace";
 
