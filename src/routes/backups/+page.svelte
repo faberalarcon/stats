@@ -150,11 +150,6 @@
               {/if}
             </td>
           </tr>
-          {#if t.last?.error}
-            <tr class="archive__error-row">
-              <td colspan="10" class="archive__error">{t.last.error}</td>
-            </tr>
-          {/if}
         {/each}
       </tbody>
     </table>
@@ -275,13 +270,7 @@
     display: inline-block;
   }
   .archive__tick--fail { background: var(--color-status-error); }
-  .archive__error-row td { background: var(--color-paper-200) !important; }
-  .archive__error {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--color-blood-500);
-    padding: 0.6rem 0.5rem !important;
-  }
+
 
   .archive__drive-head {
     display: flex;
