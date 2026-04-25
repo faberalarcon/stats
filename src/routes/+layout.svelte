@@ -134,6 +134,16 @@
     transition: border-color 0.2s;
   }
   .app-footer__links a:hover { border-bottom-color: var(--color-blood-300); }
+  /* Footer is always dark — pin bg + text so dark-mode token inversion doesn't flip it white */
+  @media (prefers-color-scheme: dark) {
+    .app-footer { background: #05080c; }
+    .app-footer__mark-word { color: #f0f4f8; }
+    .app-footer__mark-sub { color: #c9d2dc; }
+    .app-footer__foot { color: #c9d2dc; }
+    .app-footer__links a { color: #8bb8e0; }
+    .app-footer__visitors { color: #c9d2dc; }
+    .app-footer__count { color: #f0f4f8; }
+  }
   .app-footer__visitors {
     margin-top: 1.25rem;
     padding-top: 1.25rem;
