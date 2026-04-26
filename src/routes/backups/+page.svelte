@@ -1,7 +1,7 @@
 <script lang="ts">
   import SectionHeader from '$lib/components/SectionHeader.svelte';
   import StatCard from '$lib/components/StatCard.svelte';
-  import { TIERS, humanAge, formatBytes, formatDuration, staleness } from '$lib/backups';
+  import { TIERS, humanAge, formatBytes, formatDuration } from '$lib/backups';
   import type { BackupTier, TierData, DriveHealth } from '$lib/backups';
 
   let { data } = $props();
@@ -32,7 +32,7 @@
   }
 
   function healthyTiers(m: typeof data.manifest): number {
-    return TIERS.filter((t) => staleness(t, m.tiers[t].last) === 'fresh').length;
+    return TIERS.filter((t) => m.tiers[t].last?.status === 'success').length;
   }
 
   function lastOverall(m: typeof data.manifest): string | null {
@@ -112,7 +112,6 @@
         {#each TIERS as tier}
           {@const t = data.manifest.tiers[tier] as TierData}
           {@const meta = TIER_META[tier]}
-          {@const state = staleness(tier, t.last)}
           <tr>
             <td data-label="Tier" class="archive__tier-label">{meta.label}</td>
             <td data-label="Cadence"><em class="archive__cadence">{meta.cadence}</em></td>
@@ -121,9 +120,8 @@
               {#if t.last}
                 <span
                   class="dashboard-status"
-                  class:dashboard-status--active={state === 'fresh' && t.last.status === 'success'}
-                  class:dashboard-status--alert={state === 'overdue' || t.last.status !== 'success'}
-                  class:dashboard-status--idle={state === 'due' || state === 'unknown'}
+                  class:dashboard-status--active={t.last.status === 'success'}
+                  class:dashboard-status--alert={t.last.status !== 'success'}
                 >{t.last.status}</span>
               {:else}
                 &mdash;

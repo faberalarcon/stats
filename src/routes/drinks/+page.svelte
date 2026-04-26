@@ -28,6 +28,26 @@
 
   const leaderLabels = { allTime: 'All Time', thisWeek: 'This Week', today: 'Today' } as const;
   const topLabels = { allTime: 'All Time', thisWeek: 'This Week' } as const;
+  const dayPalette = [
+    'var(--color-chart-cpu)',
+    'var(--color-chart-network)',
+    'var(--color-chart-drinks)',
+    'var(--color-chart-memory)',
+    'var(--color-chart-temp)',
+    'var(--color-chart-weather)',
+    'var(--color-leaf-500)'
+  ];
+
+  function colorsFor(count: number, palette: string[]): string[] {
+    return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
+  }
+
+  function hourColor(hour: number): string {
+    if (hour < 6) return 'var(--color-chart-weather)';
+    if (hour < 12) return 'var(--color-chart-drinks)';
+    if (hour < 18) return 'var(--color-chart-temp)';
+    return 'var(--color-chart-memory)';
+  }
 </script>
 
 <svelte:head>
@@ -96,6 +116,7 @@
             <BarChart
               labels={s.topDrinks[topDrinksView].map(d => d.name)}
               data={s.topDrinks[topDrinksView].map(d => d.count)}
+              colors={s.topDrinks[topDrinksView].map(() => 'var(--color-chart-drinks)')}
               horizontal
               label="Orders"
             />
@@ -112,6 +133,7 @@
             <BarChart
               labels={s.dowHistogram.map(d => d.day)}
               data={s.dowHistogram.map(d => d.count)}
+              colors={colorsFor(s.dowHistogram.length, dayPalette)}
               label="Orders"
             />
           </div>
@@ -122,6 +144,7 @@
             <BarChart
               labels={s.hourHistogram.map(h => h.hour.toString().padStart(2, '0'))}
               data={s.hourHistogram.map(h => h.count)}
+              colors={s.hourHistogram.map(h => hourColor(h.hour))}
               label="Orders"
             />
           </div>
@@ -139,6 +162,9 @@
               labels={s.dailyTimeline.map(d => formatDate(d.date))}
               data={s.dailyTimeline.map(d => d.count)}
               label="Orders"
+              color="var(--color-chart-drinks)"
+              fill
+              beginAtZero
             />
           </div>
         </figure>
