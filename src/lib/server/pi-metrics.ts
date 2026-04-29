@@ -93,24 +93,27 @@ function fmtLabel(t: number, bucketLabel: 'hour' | 'day'): string {
 }
 
 interface Bucketable { t: number; cpuPct: number | null; memPct: number; tempC: number | null; load1: number; downMBps: number; upMBps: number; }
+type BucketMode = 'average' | 'peak';
 
-function bucketize(samples: Bucketable[], spanMs: number, bucketMs: number, bucketLabel: 'hour' | 'day'): PiPoint[] {
+function bucketize(samples: Bucketable[], spanMs: number, bucketMs: number, bucketLabel: 'hour' | 'day', mode: BucketMode): PiPoint[] {
   if (!samples.length) return [];
   const end = Date.now();
   const start = end - spanMs;
   const count = Math.round(spanMs / bucketMs);
-  const bins: Array<{ cpu: number; cpuN: number; mem: number; memN: number; temp: number; tempN: number; down: number; up: number; load: number; loadN: number; }> =
-    Array.from({ length: count }, () => ({ cpu: 0, cpuN: 0, mem: 0, memN: 0, temp: 0, tempN: 0, down: 0, up: 0, load: 0, loadN: 0 }));
+  const bins: Array<{ cpu: number; cpuMax: number; cpuN: number; mem: number; memN: number; temp: number; tempMax: number; tempN: number; down: number; downMax: number; up: number; upMax: number; load: number; loadN: number; }> =
+    Array.from({ length: count }, () => ({ cpu: 0, cpuMax: 0, cpuN: 0, mem: 0, memN: 0, temp: 0, tempMax: 0, tempN: 0, down: 0, downMax: 0, up: 0, upMax: 0, load: 0, loadN: 0 }));
   const downCount: number[] = new Array(count).fill(0);
 
   for (const s of samples) {
     if (s.t < start || s.t > end) continue;
     const idx = Math.min(count - 1, Math.floor((s.t - start) / bucketMs));
     const b = bins[idx];
-    if (s.cpuPct != null) { b.cpu += s.cpuPct; b.cpuN++; }
+    if (s.cpuPct != null) { b.cpu += s.cpuPct; b.cpuMax = Math.max(b.cpuMax, s.cpuPct); b.cpuN++; }
     b.mem += s.memPct; b.memN++;
-    if (s.tempC != null) { b.temp += s.tempC; b.tempN++; }
-    b.down += s.downMBps; b.up += s.upMBps; downCount[idx]++;
+    if (s.tempC != null) { b.temp += s.tempC; b.tempMax = Math.max(b.tempMax, s.tempC); b.tempN++; }
+    b.down += s.downMBps; b.downMax = Math.max(b.downMax, s.downMBps);
+    b.up += s.upMBps; b.upMax = Math.max(b.upMax, s.upMBps);
+    downCount[idx]++;
     b.load += s.load1; b.loadN++;
   }
 
@@ -122,11 +125,11 @@ function bucketize(samples: Bucketable[], spanMs: number, bucketMs: number, buck
     out.push({
       time: fmtLabel(t, bucketLabel),
       t,
-      cpuPct: b.cpuN ? Math.round((b.cpu / b.cpuN) * 10) / 10 : 0,
+      cpuPct: b.cpuN ? Math.round((mode === 'peak' ? b.cpuMax : b.cpu / b.cpuN) * 10) / 10 : 0,
       memPct: Math.round((b.mem / b.memN) * 10) / 10,
-      tempC: b.tempN ? Math.round((b.temp / b.tempN) * 10) / 10 : 0,
-      netDownMBps: downCount[i] ? Math.round((b.down / downCount[i]) * 100) / 100 : 0,
-      netUpMBps: downCount[i] ? Math.round((b.up / downCount[i]) * 100) / 100 : 0,
+      tempC: b.tempN ? Math.round((mode === 'peak' ? b.tempMax : b.temp / b.tempN) * 10) / 10 : 0,
+      netDownMBps: downCount[i] ? Math.round((mode === 'peak' ? b.downMax : b.down / downCount[i]) * 100) / 100 : 0,
+      netUpMBps: downCount[i] ? Math.round((mode === 'peak' ? b.upMax : b.up / downCount[i]) * 100) / 100 : 0,
       load1: b.loadN ? Math.round((b.load / b.loadN) * 100) / 100 : 0
     });
   }
@@ -144,7 +147,7 @@ export async function getPiMetrics(range: '1d' | '7d' = '1d'): Promise<PiMetrics
   const spanMs = range === '7d' ? 7 * 86400000 : 86400000;
   const bucketMs = range === '7d' ? 3600000 : 5 * 60000; // 7d -> hourly; 1d -> 5-min raw
   const bucketLabel: 'hour' | 'day' = 'hour';
-  const history = bucketize(withRates, spanMs, bucketMs, bucketLabel);
+  const history = bucketize(withRates, spanMs, bucketMs, bucketLabel, range === '7d' ? 'peak' : 'average');
 
   return {
     available: true,

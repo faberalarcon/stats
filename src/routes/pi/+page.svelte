@@ -11,7 +11,7 @@
   ];
   const rangeLabels: Record<string, string> = {
     '1d': 'last 24 hours',
-    '7d': 'last 7 days (hourly avg)'
+    '7d': 'last 7 days (hourly peaks)'
   };
 
   function fmtMem(mb: number | null | undefined): string {

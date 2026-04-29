@@ -22,6 +22,8 @@ export interface DailyWeather {
 export interface WeatherStats {
   rainyDaysThisYear: number;
   sunnyDaysThisYear: number;
+  otherDaysThisYear: number;
+  trackedDaysThisYear: number;
   hottestDay: { date: string; temp: number } | null;
   coldestDay: { date: string; temp: number } | null;
   avgTempThisMonth: number | null;
@@ -111,6 +113,8 @@ export async function getYearStats(): Promise<WeatherStats> {
     return {
       rainyDaysThisYear: 0,
       sunnyDaysThisYear: 0,
+      otherDaysThisYear: 0,
+      trackedDaysThisYear: 0,
       hottestDay: null,
       coldestDay: null,
       avgTempThisMonth: null,
@@ -162,9 +166,14 @@ export async function getYearStats(): Promise<WeatherStats> {
     daysSinceRain++;
   }
 
+  const trackedDays = d.time.length;
+  const otherDays = Math.max(0, trackedDays - rainyDays - sunnyDays);
+
   return {
     rainyDaysThisYear: rainyDays,
     sunnyDaysThisYear: sunnyDays,
+    otherDaysThisYear: otherDays,
+    trackedDaysThisYear: trackedDays,
     hottestDay,
     coldestDay,
     avgTempThisMonth: monthTempCount > 0 ? Math.round(monthTempSum / monthTempCount) : null,

@@ -116,6 +116,11 @@
         <div class="stat-grid stat-grid--tight">
           <StatCard label="Rainy days, YTD" value={data.yearStats.rainyDaysThisYear} />
           <StatCard label="Sunny days, YTD" value={data.yearStats.sunnyDaysThisYear} />
+          <StatCard
+            label="Other days, YTD"
+            value={data.yearStats.otherDaysThisYear}
+            sublabel="cloud, snow, fog, or mixed"
+          />
           {#if data.yearStats.hottestDay}
             <StatCard
               label="Hottest day"
