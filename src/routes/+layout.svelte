@@ -9,6 +9,7 @@
     { href: '/',        label: 'Overview' },
     { href: '/house',   label: 'House' },
     { href: '/drinks',  label: 'Drinks' },
+    { href: '/visitors', label: 'Visitors' },
     { href: '/backups', label: 'Backups' },
     { href: '/pi',      label: 'Pi' }
   ];
