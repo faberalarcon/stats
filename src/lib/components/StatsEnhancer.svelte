@@ -14,6 +14,7 @@
   const WARMUP_BATCH_SIZE = 40;
   const SWIPE_MIN_X = 70;
   const SWIPE_RATIO = 1.5;
+  const SWIPE_DEDUP_MS = 500;
   const INTERACTIVE_SELECTOR = [
     'a',
     'button',
@@ -42,6 +43,8 @@
   let pendingIdle: number | null = null;
   let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
   let activePointer: { id: number; start: Point } | null = null;
+  let activeTouch: { id: number; start: Point } | null = null;
+  let lastSwipeAt = 0;
   const sentWarmups = new Set<string>();
 
   function localDate(date: Date): string {
@@ -154,7 +157,7 @@
   }
 
   function isMobileSwipeTarget(): boolean {
-    return browser && window.matchMedia('(pointer: coarse) and (max-width: 760px)').matches;
+    return browser && window.innerWidth <= 900 && window.matchMedia('(pointer: coarse), (hover: none)').matches;
   }
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -167,14 +170,12 @@
     activePointer = { id: event.pointerId, start: { x: event.clientX, y: event.clientY } };
   }
 
-  function handlePointerUp(event: PointerEvent) {
-    if (!activePointer || activePointer.id !== event.pointerId) return;
+  function completeSwipe(start: Point, end: Point) {
+    const now = Date.now();
+    if (now - lastSwipeAt < SWIPE_DEDUP_MS) return;
 
-    const start = activePointer.start;
-    activePointer = null;
-
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
     if (Math.abs(dx) < SWIPE_MIN_X || Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return;
 
     const currentIndex = sectionIndexForPath($page.url.pathname);
@@ -182,11 +183,49 @@
 
     const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;
     const nextSection = statsSections[nextIndex];
-    if (nextSection) void goto(nextSection.href);
+    if (!nextSection) return;
+
+    lastSwipeAt = now;
+    void goto(nextSection.href);
+  }
+
+  function handlePointerUp(event: PointerEvent) {
+    if (!activePointer || activePointer.id !== event.pointerId) return;
+
+    const start = activePointer.start;
+    activePointer = null;
+    completeSwipe(start, { x: event.clientX, y: event.clientY });
   }
 
   function handlePointerCancel(event: PointerEvent) {
     if (activePointer?.id === event.pointerId) activePointer = null;
+  }
+
+  function handleTouchStart(event: TouchEvent) {
+    if (!isMobileSwipeTarget() || event.touches.length !== 1) return;
+    if (isInteractiveTarget(event.target)) return;
+
+    const touch = event.changedTouches[0];
+    activeTouch = {
+      id: touch.identifier,
+      start: { x: touch.clientX, y: touch.clientY }
+    };
+  }
+
+  function handleTouchEnd(event: TouchEvent) {
+    if (!activeTouch) return;
+    const touch = Array.from(event.changedTouches).find((item) => item.identifier === activeTouch?.id);
+    if (!touch) return;
+
+    const start = activeTouch.start;
+    activeTouch = null;
+    completeSwipe(start, { x: touch.clientX, y: touch.clientY });
+  }
+
+  function handleTouchCancel(event: TouchEvent) {
+    if (!activeTouch) return;
+    const touch = Array.from(event.changedTouches).find((item) => item.identifier === activeTouch?.id);
+    if (touch) activeTouch = null;
   }
 
   $effect(() => {
@@ -201,6 +240,9 @@
     document.addEventListener('pointerdown', handlePointerDown, { passive: true });
     document.addEventListener('pointerup', handlePointerUp, { passive: true });
     document.addEventListener('pointercancel', handlePointerCancel, { passive: true });
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleTouchCancel, { passive: true });
   });
 
   onDestroy(() => {
@@ -209,6 +251,9 @@
     document.removeEventListener('pointerdown', handlePointerDown);
     document.removeEventListener('pointerup', handlePointerUp);
     document.removeEventListener('pointercancel', handlePointerCancel);
+    document.removeEventListener('touchstart', handleTouchStart);
+    document.removeEventListener('touchend', handleTouchEnd);
+    document.removeEventListener('touchcancel', handleTouchCancel);
 
     const idleWindow = window as IdleWindow;
     if (pendingIdle !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(pendingIdle);

@@ -206,6 +206,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+@media (pointer: coarse) and (max-width: 900px) {
+  body,
+  .app-main,
+  .app-footer {
+    touch-action: pan-y;
+  }
+}
+
 img,
 svg,
 canvas {
