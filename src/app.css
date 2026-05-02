@@ -358,8 +358,10 @@ a:hover { color: var(--color-blood-600); text-decoration-color: var(--color-bloo
   border-bottom: 1px solid color-mix(in oklab, var(--color-paper-300) 82%, transparent);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   box-shadow: 0 1px 0 color-mix(in oklab, var(--color-blood-500) 12%, transparent);
 }
