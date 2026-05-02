@@ -46,6 +46,12 @@
     next: HTMLDivElement;
     width: number;
   };
+  type SwipeNavigationDetail = {
+    href: string;
+    scrollY: number;
+    handled: boolean;
+    complete?: Promise<void>;
+  };
 
   let pendingIdle: number | null = null;
   let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -357,6 +363,16 @@
     html.style.scrollBehavior = previousScrollBehavior;
   }
 
+  function requestShellNavigation(href: string, scrollY: number): Promise<void> | null {
+    const detail: SwipeNavigationDetail = {
+      href,
+      scrollY,
+      handled: false
+    };
+    window.dispatchEvent(new CustomEvent<SwipeNavigationDetail>('stats:swipe-navigate', { detail }));
+    return detail.handled && detail.complete ? detail.complete : null;
+  }
+
   function handleSwipeMove(end: Point, start: Point): boolean {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -405,8 +421,18 @@
     lastSwipeAt = now;
 
     const scrollY = window.scrollY;
-    const navigation = goto(href, { noScroll: true, keepFocus: true });
     const animation = prefersReducedMotion() ? Promise.resolve() : animateOverlayCommit(dx);
+    const shellNavigation = requestShellNavigation(href, scrollY);
+
+    if (shellNavigation) {
+      const [navigationResult] = await Promise.allSettled([shellNavigation, animation]);
+      if (navigationResult.status === 'fulfilled') {
+        destroyOverlay();
+        return;
+      }
+    }
+
+    const navigation = goto(href, { noScroll: true, keepFocus: true });
     const [navigationResult] = await Promise.allSettled([navigation, animation]);
 
     if (navigationResult.status === 'rejected') {

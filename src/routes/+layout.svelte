@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   import HubNav from '$lib/components/HubNav.svelte';
   import StatsEnhancer from '$lib/components/StatsEnhancer.svelte';
+  import StatsTabShell from '$lib/components/StatsTabShell.svelte';
   import { statsSections } from '$lib/stats-sections';
 
   let { children, data } = $props();
@@ -37,7 +38,9 @@
 <StatsEnhancer />
 
 <main id="main-content" class="app-main">
-  {@render children()}
+  <StatsTabShell>
+    {@render children()}
+  </StatsTabShell>
 </main>
 
 <footer class="app-footer">
