@@ -9,9 +9,10 @@
     sectionIndexForPath,
     statsSections
   } from '$lib/stats-sections';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
 
   const WARMUP_BATCH_SIZE = 40;
+  const PREVIEW_CACHE_LIMIT = 6;
   const SWIPE_MIN_X = 70;
   const SWIPE_RATIO = 1.5;
   const SWIPE_DEDUP_MS = 500;
@@ -48,6 +49,8 @@
 
   let pendingIdle: number | null = null;
   let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingPreviewIdle: number | null = null;
+  let pendingPreviewTimeout: ReturnType<typeof setTimeout> | null = null;
   let activePointer: { id: number; start: Point } | null = null;
   let activeTouch: { id: number; start: Point } | null = null;
   let lastSwipeAt = 0;
@@ -166,8 +169,49 @@
     pendingTimeout = setTimeout(() => void postWarmup(hrefs), 250);
   }
 
+  function runPreviewPrewarm(hrefs: string[]) {
+    void Promise.all(hrefs.map((href) => loadPreviewHtml(href)));
+  }
+
+  function schedulePreviewPrewarm(hrefs: string[]) {
+    if (!browser || !hrefs.length || !canWarmup()) return;
+
+    const pendingHrefs = [...new Set(hrefs)].filter((href) => !previewCache.has(href));
+    if (!pendingHrefs.length) return;
+
+    const idleWindow = window as IdleWindow;
+    if (pendingPreviewIdle !== null && idleWindow.cancelIdleCallback) {
+      idleWindow.cancelIdleCallback(pendingPreviewIdle);
+      pendingPreviewIdle = null;
+    }
+    if (pendingPreviewTimeout !== null) {
+      clearTimeout(pendingPreviewTimeout);
+      pendingPreviewTimeout = null;
+    }
+
+    if (idleWindow.requestIdleCallback) {
+      pendingPreviewIdle = idleWindow.requestIdleCallback(
+        () => {
+          pendingPreviewIdle = null;
+          runPreviewPrewarm(pendingHrefs);
+        },
+        { timeout: 900 }
+      );
+      return;
+    }
+
+    pendingPreviewTimeout = setTimeout(() => {
+      pendingPreviewTimeout = null;
+      runPreviewPrewarm(pendingHrefs);
+    }, 350);
+  }
+
   function isMobileSwipeTarget(): boolean {
     return browser && window.innerWidth <= 900 && window.matchMedia('(pointer: coarse), (hover: none)').matches;
+  }
+
+  function prefersReducedMotion(): boolean {
+    return browser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -187,6 +231,14 @@
     return statsSections[nextIndex]?.href ?? null;
   }
 
+  function adjacentSectionHrefs(): string[] {
+    const currentIndex = sectionIndexForPath($page.url.pathname);
+    if (currentIndex === -1) return [];
+    return [statsSections[currentIndex - 1]?.href, statsSections[currentIndex + 1]?.href].filter(
+      (href): href is string => Boolean(href)
+    );
+  }
+
   function readMainPreview(html: string): string | null {
     try {
       const parsed = new DOMParser().parseFromString(html, 'text/html');
@@ -202,7 +254,14 @@
       const response = await fetch(href, { credentials: 'same-origin' });
       if (!response.ok) return null;
       const preview = readMainPreview(await response.text());
-      if (preview) previewCache.set(href, preview);
+      if (preview) {
+        previewCache.set(href, preview);
+        while (previewCache.size > PREVIEW_CACHE_LIMIT) {
+          const oldest = previewCache.keys().next().value;
+          if (!oldest) break;
+          previewCache.delete(oldest);
+        }
+      }
       return preview;
     } catch {
       return null;
@@ -285,6 +344,19 @@
     return new Promise((resolve) => setTimeout(resolve, 180));
   }
 
+  function clampedScrollY(scrollY: number): number {
+    const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    return Math.min(scrollY, maxScrollY);
+  }
+
+  function restoreScrollY(scrollY: number) {
+    const html = document.documentElement;
+    const previousScrollBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo({ left: window.scrollX, top: clampedScrollY(scrollY), behavior: 'auto' });
+    html.style.scrollBehavior = previousScrollBehavior;
+  }
+
   function handleSwipeMove(end: Point, start: Point): boolean {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -292,6 +364,12 @@
 
     const targetHref = targetForDx(dx);
     if (!targetHref) return false;
+
+    if (prefersReducedMotion()) {
+      activeTargetHref = targetHref;
+      activeDirection = dx < 0 ? -1 : 1;
+      return true;
+    }
 
     if (!activeOverlay || activeTargetHref !== targetHref) {
       destroyOverlay();
@@ -325,8 +403,20 @@
 
     const href = activeTargetHref;
     lastSwipeAt = now;
-    await animateOverlayCommit(dx);
-    await goto(href).catch(() => undefined);
+
+    const scrollY = window.scrollY;
+    const navigation = goto(href, { noScroll: true, keepFocus: true });
+    const animation = prefersReducedMotion() ? Promise.resolve() : animateOverlayCommit(dx);
+    const [navigationResult] = await Promise.allSettled([navigation, animation]);
+
+    if (navigationResult.status === 'rejected') {
+      await animateOverlayCancel();
+      destroyOverlay();
+      return;
+    }
+
+    await tick();
+    restoreScrollY(scrollY);
     destroyOverlay();
   }
 
@@ -397,6 +487,10 @@
     scheduleWarmup(hrefs);
   });
 
+  $effect(() => {
+    schedulePreviewPrewarm(adjacentSectionHrefs());
+  });
+
   onMount(() => {
     document.addEventListener('pointerdown', handlePointerDown, { passive: true });
     document.addEventListener('pointermove', handlePointerMove, { passive: true });
@@ -424,5 +518,7 @@
     const idleWindow = window as IdleWindow;
     if (pendingIdle !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(pendingIdle);
     if (pendingTimeout !== null) clearTimeout(pendingTimeout);
+    if (pendingPreviewIdle !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(pendingPreviewIdle);
+    if (pendingPreviewTimeout !== null) clearTimeout(pendingPreviewTimeout);
   });
 </script>

@@ -254,6 +254,14 @@ body.swipe-dragging {
   to { background-position: 100% 0; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .swipe-page,
+  .swipe-preview-loading {
+    animation: none;
+    transition: none !important;
+  }
+}
+
 img,
 svg,
 canvas {
