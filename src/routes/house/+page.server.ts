@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import { getStates, getHistory, getStatistics, ENTITIES } from '$lib/server/home-assistant';
 import type { HAStatisticPoint } from '$lib/server/home-assistant';
 import { getDailyForecast, getHourlyOutdoorTemps, getCurrentWeather } from '$lib/server/weather';
+import { withStatsCache } from '$lib/server/stats-preload-cache';
 import type { PageServerLoad } from './$types';
 
 // All bucket alignment is pinned to NY time via Intl, independent of process.env.TZ.
@@ -86,7 +87,7 @@ function findBucket(edges: number[], ts: number): number {
   return lo;
 }
 
-export const load: PageServerLoad = async ({ url }) => {
+export async function _loadHousePageData(url: URL) {
   const range = parseRange(url.searchParams.get('range'));
   const { buckets, bucketLabel, days } = RANGES[range];
   const now = Date.now();
@@ -404,4 +405,8 @@ export const load: PageServerLoad = async ({ url }) => {
     },
     forecast
   };
+}
+
+export const load: PageServerLoad = async ({ url }) => {
+  return withStatsCache(url, () => _loadHousePageData(url));
 };

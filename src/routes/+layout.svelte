@@ -2,17 +2,10 @@
   import '../app.css';
   import { page } from '$app/stores';
   import HubNav from '$lib/components/HubNav.svelte';
+  import StatsEnhancer from '$lib/components/StatsEnhancer.svelte';
+  import { statsSections } from '$lib/stats-sections';
 
   let { children, data } = $props();
-
-  const navLinks = [
-    { href: '/',        label: 'Overview' },
-    { href: '/house',   label: 'House' },
-    { href: '/drinks',  label: 'Drinks' },
-    { href: '/visitors', label: 'Visitors' },
-    { href: '/backups', label: 'Backups' },
-    { href: '/pi',      label: 'Pi' }
-  ];
 
   const now = new Date();
   const buildYear = now.getFullYear();
@@ -29,7 +22,7 @@
       <HubNav current="stats" />
     </div>
     <nav class="app-header__nav" aria-label="Stats sections">
-      {#each navLinks as link}
+      {#each statsSections as link}
         <a
           href={link.href}
           aria-current={$page.url.pathname === link.href ? 'page' : undefined}
@@ -40,6 +33,8 @@
     </nav>
   </div>
 </header>
+
+<StatsEnhancer />
 
 <main id="main-content" class="app-main">
   {@render children()}

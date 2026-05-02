@@ -1,7 +1,8 @@
 import { fetchDrinkHubStats } from '$lib/server/drink-hub';
+import { withStatsCache } from '$lib/server/stats-preload-cache';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
+export async function _loadDrinksPageData(url: URL) {
   // Pass through any filter params
   const params = new URLSearchParams();
   for (const key of ['profile_id', 'drink_id', 'category', 'from', 'to']) {
@@ -21,4 +22,8 @@ export const load: PageServerLoad = async ({ url }) => {
       to: url.searchParams.get('to') ?? ''
     }
   };
+}
+
+export const load: PageServerLoad = async ({ url }) => {
+  return withStatsCache(url, () => _loadDrinksPageData(url));
 };
