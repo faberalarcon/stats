@@ -263,7 +263,6 @@
       const main = parsed.querySelector('#main-content');
       if (!main) return null;
       main.removeAttribute('id');
-      main.classList.add('swipe-page__main');
       return main.outerHTML;
     } catch {
       return null;
@@ -302,26 +301,27 @@
     if (!main) return null;
 
     const rect = main.getBoundingClientRect();
-    const headerOffset = fixedHeaderHeight();
+    const overlayTop = fixedHeaderHeight();
+    const contentOffsetY = rect.top - overlayTop;
     const root = document.createElement('div');
     root.className = 'swipe-overlay';
     root.style.left = `${Math.round(rect.left)}px`;
-    root.style.top = `${Math.round(rect.top + headerOffset)}px`;
+    root.style.top = `${Math.round(overlayTop)}px`;
     root.style.width = `${Math.round(rect.width)}px`;
-    root.style.height = `${Math.round(Math.max(1, rect.height - headerOffset))}px`;
+    root.style.height = `${Math.round(Math.max(1, window.innerHeight - overlayTop))}px`;
 
     const current = document.createElement('div');
     current.className = 'swipe-page swipe-page--current';
     const currentMain = main.cloneNode(true) as HTMLElement;
     currentMain.removeAttribute('id');
-    currentMain.classList.add('swipe-page__main');
+    currentMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
     current.append(currentMain);
 
     const next = document.createElement('div');
     next.className = 'swipe-page swipe-page--next';
     const nextMain = document.createElement('main');
     nextMain.className = main.className;
-    nextMain.classList.add('swipe-page__main');
+    nextMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
     const loading = document.createElement('div');
     loading.className = 'swipe-preview-loading';
     nextMain.append(loading);
@@ -333,6 +333,10 @@
     void loadPreviewHtml(targetHref).then((preview) => {
       if (!activeOverlay || activeTargetHref !== targetHref || !preview) return;
       next.innerHTML = preview;
+      const previewMain = next.firstElementChild;
+      if (previewMain instanceof HTMLElement) {
+        previewMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
+      }
     });
 
     return { root, current, next, width: rect.width };
