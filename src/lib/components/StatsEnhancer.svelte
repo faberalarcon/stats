@@ -225,6 +225,17 @@
     return target instanceof Element && Boolean(target.closest(INTERACTIVE_SELECTOR));
   }
 
+  function fixedHeaderHeight(): number {
+    const cssValue = getComputedStyle(document.documentElement)
+      .getPropertyValue('--stats-app-header-height')
+      .trim();
+    const cssPixels = Number.parseFloat(cssValue);
+    if (Number.isFinite(cssPixels) && cssPixels > 0) return cssPixels;
+
+    const header = document.querySelector('.app-header');
+    return header instanceof HTMLElement ? header.getBoundingClientRect().height : 0;
+  }
+
   function handlePointerDown(event: PointerEvent) {
     if (!isMobileSwipeTarget() || !event.isPrimary || event.pointerType === 'mouse') return;
     if (isInteractiveTarget(event.target)) return;
@@ -252,6 +263,7 @@
       const main = parsed.querySelector('#main-content');
       if (!main) return null;
       main.removeAttribute('id');
+      main.classList.add('swipe-page__main');
       return main.outerHTML;
     } catch {
       return null;
@@ -290,22 +302,30 @@
     if (!main) return null;
 
     const rect = main.getBoundingClientRect();
+    const headerOffset = fixedHeaderHeight();
     const root = document.createElement('div');
     root.className = 'swipe-overlay';
     root.style.left = `${Math.round(rect.left)}px`;
-    root.style.top = `${Math.round(rect.top)}px`;
+    root.style.top = `${Math.round(rect.top + headerOffset)}px`;
     root.style.width = `${Math.round(rect.width)}px`;
-    root.style.height = `${Math.round(rect.height)}px`;
+    root.style.height = `${Math.round(Math.max(1, rect.height - headerOffset))}px`;
 
     const current = document.createElement('div');
     current.className = 'swipe-page swipe-page--current';
     const currentMain = main.cloneNode(true) as HTMLElement;
     currentMain.removeAttribute('id');
+    currentMain.classList.add('swipe-page__main');
     current.append(currentMain);
 
     const next = document.createElement('div');
     next.className = 'swipe-page swipe-page--next';
-    next.innerHTML = `<main class="${main.className}"><div class="swipe-preview-loading"></div></main>`;
+    const nextMain = document.createElement('main');
+    nextMain.className = main.className;
+    nextMain.classList.add('swipe-page__main');
+    const loading = document.createElement('div');
+    loading.className = 'swipe-preview-loading';
+    nextMain.append(loading);
+    next.append(nextMain);
 
     root.append(current, next);
     document.body.append(root);

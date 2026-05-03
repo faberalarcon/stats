@@ -238,6 +238,12 @@ body.swipe-dragging {
   will-change: transform;
 }
 
+.swipe-page__main {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding-top: 1.5rem !important;
+}
+
 .swipe-page--current {
   z-index: 2;
 }
@@ -266,6 +272,12 @@ body.swipe-dragging {
   .swipe-preview-loading {
     animation: none;
     transition: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .swipe-page__main {
+    padding-top: 1rem !important;
   }
 }
 
