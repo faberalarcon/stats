@@ -56,8 +56,6 @@
 
   let pendingIdle: number | null = null;
   let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
-  let pendingPreviewIdle: number | null = null;
-  let pendingPreviewTimeout: ReturnType<typeof setTimeout> | null = null;
   let activePointer: { id: number; start: Point } | null = null;
   let activeTouch: { id: number; start: Point } | null = null;
   let lastSwipeAt = 0;
@@ -65,6 +63,7 @@
   let activeTargetHref: string | null = null;
   let activeDirection: -1 | 1 = -1;
   const previewCache = new Map<string, string>();
+  const previewRequests = new Map<string, Promise<string | null>>();
   const sentWarmups = new Set<string>();
 
   function localDate(date: Date): string {
@@ -180,37 +179,13 @@
     void Promise.all(hrefs.map((href) => loadPreviewHtml(href)));
   }
 
-  function schedulePreviewPrewarm(hrefs: string[]) {
+  function prewarmAdjacentPreviews() {
+    const hrefs = adjacentSectionHrefs();
     if (!browser || !hrefs.length || !canWarmup()) return;
 
     const pendingHrefs = [...new Set(hrefs)].filter((href) => !previewCache.has(href));
     if (!pendingHrefs.length) return;
-
-    const idleWindow = window as IdleWindow;
-    if (pendingPreviewIdle !== null && idleWindow.cancelIdleCallback) {
-      idleWindow.cancelIdleCallback(pendingPreviewIdle);
-      pendingPreviewIdle = null;
-    }
-    if (pendingPreviewTimeout !== null) {
-      clearTimeout(pendingPreviewTimeout);
-      pendingPreviewTimeout = null;
-    }
-
-    if (idleWindow.requestIdleCallback) {
-      pendingPreviewIdle = idleWindow.requestIdleCallback(
-        () => {
-          pendingPreviewIdle = null;
-          runPreviewPrewarm(pendingHrefs);
-        },
-        { timeout: 900 }
-      );
-      return;
-    }
-
-    pendingPreviewTimeout = setTimeout(() => {
-      pendingPreviewTimeout = null;
-      runPreviewPrewarm(pendingHrefs);
-    }, 350);
+    runPreviewPrewarm(pendingHrefs);
   }
 
   function isMobileSwipeTarget(): boolean {
@@ -240,6 +215,7 @@
     if (!isMobileSwipeTarget() || !event.isPrimary || event.pointerType === 'mouse') return;
     if (isInteractiveTarget(event.target)) return;
     activePointer = { id: event.pointerId, start: { x: event.clientX, y: event.clientY } };
+    prewarmAdjacentPreviews();
   }
 
   function targetForDx(dx: number): string | null {
@@ -271,7 +247,10 @@
 
   async function loadPreviewHtml(href: string): Promise<string | null> {
     if (previewCache.has(href)) return previewCache.get(href) ?? null;
-    try {
+    const pending = previewRequests.get(href);
+    if (pending) return pending;
+
+    const request = (async () => {
       const response = await fetch(href, { credentials: 'same-origin' });
       if (!response.ok) return null;
       const preview = readMainPreview(await response.text());
@@ -284,6 +263,15 @@
         }
       }
       return preview;
+    })()
+      .catch(() => null)
+      .finally(() => {
+        previewRequests.delete(href);
+      });
+
+    previewRequests.set(href, request);
+    try {
+      return await request;
     } catch {
       return null;
     }
@@ -296,9 +284,22 @@
     document.body.classList.remove('swipe-dragging');
   }
 
+  function createSwipeContent(contentOffsetY: number): HTMLDivElement {
+    const content = document.createElement('div');
+    content.className = 'swipe-page__content';
+    content.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
+    return content;
+  }
+
   function createOverlay(targetHref: string): SwipeOverlay | null {
     const main = document.getElementById('main-content');
     if (!main) return null;
+
+    const targetPreview = previewCache.get(targetHref);
+    if (!targetPreview) {
+      void loadPreviewHtml(targetHref);
+      return null;
+    }
 
     const rect = main.getBoundingClientRect();
     const overlayTop = fixedHeaderHeight();
@@ -314,30 +315,18 @@
     current.className = 'swipe-page swipe-page--current';
     const currentMain = main.cloneNode(true) as HTMLElement;
     currentMain.removeAttribute('id');
-    currentMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
-    current.append(currentMain);
+    const currentContent = createSwipeContent(contentOffsetY);
+    currentContent.append(currentMain);
+    current.append(currentContent);
 
     const next = document.createElement('div');
     next.className = 'swipe-page swipe-page--next';
-    const nextMain = document.createElement('main');
-    nextMain.className = main.className;
-    nextMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
-    const loading = document.createElement('div');
-    loading.className = 'swipe-preview-loading';
-    nextMain.append(loading);
-    next.append(nextMain);
+    const nextContent = createSwipeContent(contentOffsetY);
+    nextContent.innerHTML = targetPreview;
+    next.append(nextContent);
 
     root.append(current, next);
     document.body.append(root);
-
-    void loadPreviewHtml(targetHref).then((preview) => {
-      if (!activeOverlay || activeTargetHref !== targetHref || !preview) return;
-      next.innerHTML = preview;
-      const previewMain = next.firstElementChild;
-      if (previewMain instanceof HTMLElement) {
-        previewMain.style.transform = `translate3d(0, ${Math.round(contentOffsetY)}px, 0)`;
-      }
-    });
 
     return { root, current, next, width: rect.width };
   }
@@ -421,10 +410,10 @@
     if (!activeOverlay || activeTargetHref !== targetHref) {
       destroyOverlay();
       activeTargetHref = targetHref;
-      activeOverlay = createOverlay(targetHref);
-      if (!activeOverlay) return false;
-      document.body.classList.add('swipe-dragging');
       activeDirection = dx < 0 ? -1 : 1;
+      activeOverlay = createOverlay(targetHref);
+      if (!activeOverlay) return true;
+      document.body.classList.add('swipe-dragging');
       activeOverlay.next.style.transform = dx < 0 ? 'translate3d(100%, 0, 0)' : 'translate3d(-100%, 0, 0)';
     }
 
@@ -506,6 +495,7 @@
       id: touch.identifier,
       start: { x: touch.clientX, y: touch.clientY }
     };
+    prewarmAdjacentPreviews();
   }
 
   function handleTouchEnd(event: TouchEvent) {
@@ -545,7 +535,7 @@
   });
 
   $effect(() => {
-    schedulePreviewPrewarm(adjacentSectionHrefs());
+    prewarmAdjacentPreviews();
   });
 
   onMount(() => {
@@ -575,7 +565,5 @@
     const idleWindow = window as IdleWindow;
     if (pendingIdle !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(pendingIdle);
     if (pendingTimeout !== null) clearTimeout(pendingTimeout);
-    if (pendingPreviewIdle !== null && idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(pendingPreviewIdle);
-    if (pendingPreviewTimeout !== null) clearTimeout(pendingPreviewTimeout);
   });
 </script>
